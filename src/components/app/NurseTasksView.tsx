@@ -1,0 +1,221 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import TaskRow from '@/components/app/TaskRow'
+import TaskCompleteDialog from '@/components/app/TaskCompleteDialog'
+import SessionBanner from '@/components/app/SessionBanner'
+import SurgerySwitcher from '@/components/app/SurgerySwitcher'
+import { getMinutesUntilLock } from '@/lib/session/minutes-until-lock'
+import type { EnrichedTask } from '@/lib/services/tasks'
+
+type Surgery = { id: string; name: string }
+
+export default function NurseTasksView() {
+  const router = useRouter()
+  const [tasks, setTasks] = useState<EnrichedTask[]>([])
+  const [taskDate, setTaskDate] = useState('')
+  const [timezone, setTimezone] = useState('Europe/London')
+  const [surgeries, setSurgeries] = useState<Surgery[]>([])
+  const [activeSurgeryId, setActiveSurgeryId] = useState<string | null>(null)
+  const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [signOffError, setSignOffError] = useState('')
+  const [signingOff, setSigningOff] = useState(false)
+
+  const loadTasks = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [tasksRes, surgeriesRes] = await Promise.all([
+        fetch('/api/tasks'),
+        fetch('/api/surgeries'),
+      ])
+
+      if (tasksRes.ok) {
+        const { data } = await tasksRes.json()
+        setTasks(data.tasks ?? [])
+        setTaskDate(data.taskDate ?? '')
+        if (data.timezone) setTimezone(data.timezone)
+      }
+
+      if (surgeriesRes.ok) {
+        const { data } = await surgeriesRes.json()
+        const active = (data.surgeries ?? []).filter(
+          (s: Surgery & { is_active?: boolean }) => s.is_active !== false
+        )
+        setSurgeries(active)
+        setActiveSurgeryId(data.defaultSurgeryId ?? null)
+      }
+    } catch (error) {
+      console.error('Failed to load tasks:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
+
+  const session = useMemo(() => {
+    const morningTasks = tasks.filter((t) => t.session === 'morning')
+    const afternoonTasks = tasks.filter((t) => t.session === 'afternoon')
+
+    if (morningTasks.some((t) => t.computedStatus !== 'completed')) {
+      return 'morning' as const
+    }
+    if (afternoonTasks.length > 0) return 'afternoon' as const
+    return 'all_day' as const
+  }, [tasks])
+
+  const minutesUntilLock = getMinutesUntilLock(session, taskDate, timezone)
+
+  const pendingTasks = tasks.filter((t) => t.computedStatus !== 'completed')
+  const showMorningSignOff = session === 'morning' || session === 'all_day'
+  const showEndDay = session === 'afternoon' || session === 'all_day'
+
+  function handleSelectTask(task: EnrichedTask) {
+    if (task.status === 'completed' && task.isLocked) return
+    if (task.status === 'completed') return
+
+    setSelectedTask(task)
+    setDialogOpen(true)
+  }
+
+  async function handleMorningSignOff() {
+    setSigningOff(true)
+    setSignOffError('')
+
+    try {
+      const res = await fetch('/api/auth/nurse/sign-off/morning', {
+        method: 'POST',
+      })
+      const body = await res.json()
+
+      if (!res.ok) {
+        setSignOffError(body.error ?? 'Sign-off failed')
+        return
+      }
+
+      await loadTasks()
+    } catch (error) {
+      console.error('Morning sign-off failed:', error)
+      setSignOffError('Something went wrong')
+    } finally {
+      setSigningOff(false)
+    }
+  }
+
+  async function handleEndDay() {
+    setSigningOff(true)
+    setSignOffError('')
+
+    try {
+      const res = await fetch('/api/auth/nurse/sign-off/end-day', {
+        method: 'POST',
+      })
+      const body = await res.json()
+
+      if (!res.ok) {
+        setSignOffError(body.error ?? 'Sign-off failed')
+        return
+      }
+
+      if (body.data?.practiceUrl) {
+        router.push(body.data.practiceUrl)
+      }
+    } catch (error) {
+      console.error('End day sign-off failed:', error)
+      setSignOffError('Something went wrong')
+    } finally {
+      setSigningOff(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-1 flex-col px-5 pb-8 pt-5 md:px-8">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Today&apos;s tasks</h1>
+          <p className="text-sm text-muted-foreground">
+            {pendingTasks.length} remaining
+          </p>
+        </div>
+        <SurgerySwitcher
+          surgeries={surgeries}
+          activeSurgeryId={activeSurgeryId}
+          onSwitch={() => loadTasks()}
+        />
+      </div>
+
+      <div className="mb-4 space-y-3">
+        <SessionBanner
+          session={session}
+          minutesUntilLock={minutesUntilLock}
+        />
+        {signOffError && (
+          <p className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {signOffError}
+          </p>
+        )}
+      </div>
+
+      <div className="flex-1">
+        {loading ? (
+          <div className="space-y-3 py-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        ) : tasks.length === 0 ? (
+          <p className="py-12 text-center text-muted-foreground">
+            No tasks for today.
+          </p>
+        ) : (
+          <div className="divide-y divide-border rounded-lg border border-border bg-surface">
+            {tasks.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                onSelect={handleSelectTask}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="sticky bottom-0 mt-6 flex flex-col gap-2 border-t border-border bg-canvas pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {showMorningSignOff && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-full"
+            onClick={handleMorningSignOff}
+            disabled={signingOff}
+          >
+            End morning session
+          </Button>
+        )}
+        {showEndDay && (
+          <Button
+            type="button"
+            className="h-12 rounded-full"
+            onClick={handleEndDay}
+            disabled={signingOff}
+          >
+            End day / Sign off
+          </Button>
+        )}
+      </div>
+
+      <TaskCompleteDialog
+        task={selectedTask}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCompleted={loadTasks}
+      />
+    </div>
+  )
+}
