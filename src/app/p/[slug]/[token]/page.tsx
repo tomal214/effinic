@@ -6,6 +6,8 @@ import Logo from '@/components/app/Logo'
 import PinPad from '@/components/app/PinPad'
 import StaffPicker, { type StaffMember } from '@/components/app/StaffPicker'
 import { Button } from '@/components/ui/button'
+import FetchErrorPanel from '@/components/app/FetchErrorPanel'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 type Step = 'staff' | 'pin' | 'surgery'
 
@@ -26,6 +28,7 @@ export default function NurseLoginPage({
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [selected, setSelected] = useState<StaffMember | null>(null)
   const [loadingStaff, setLoadingStaff] = useState(true)
+  const [staffFetchError, setStaffFetchError] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
   const [surgeries, setSurgeries] = useState<Surgery[]>([])
@@ -36,6 +39,7 @@ export default function NurseLoginPage({
 
   const loadStaff = useCallback(async () => {
     setLoadingStaff(true)
+    setStaffFetchError('')
     try {
       const res = await fetch('/api/auth/nurse/staff-list', {
         method: 'POST',
@@ -44,19 +48,21 @@ export default function NurseLoginPage({
       })
       if (!res.ok) {
         setStaff([])
+        setStaffFetchError('Could not load staff. Check your connection and try again.')
         return
       }
       const json = await res.json()
       setStaff(json.data ?? [])
     } catch {
       setStaff([])
+      setStaffFetchError('Could not load staff. Check your connection and try again.')
     } finally {
       setLoadingStaff(false)
     }
   }, [slug, token])
 
   useEffect(() => {
-    loadStaff()
+    runDeferredEffect(() => loadStaff())
   }, [loadStaff])
 
   const loadSurgeries = useCallback(async () => {
@@ -148,6 +154,9 @@ export default function NurseLoginPage({
 
         {step === 'staff' && (
           <>
+            {staffFetchError ? (
+              <FetchErrorPanel message={staffFetchError} onRetry={loadStaff} />
+            ) : null}
             <StaffPicker
               staff={staff}
               selectedId={selected?.id}

@@ -8,8 +8,8 @@ const MANIFEST_BASE = {
   theme_color: 'oklch(0.58 0.14 175)',
   background_color: 'oklch(0.975 0.010 82)',
   icons: [
-    { src: '/brand/logo.png', sizes: '192x192', type: 'image/png' },
-    { src: '/brand/logo.png', sizes: '512x512', type: 'image/png' },
+    { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png' },
   ],
 }
 

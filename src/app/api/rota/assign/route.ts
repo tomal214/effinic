@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { MemberAuthError, requireRole } from '@/lib/auth/member'
 import { jsonError, jsonOk } from '@/lib/api/response'
+import {
+  assertSurgeryInPractice,
+  assertUserInPractice,
+  type PracticeRefAdmin,
+} from '@/lib/practice/assert-practice-refs'
 import { assignRotaSchema } from '@/lib/validation/rota'
 
 export async function POST(request: Request) {
@@ -12,6 +18,25 @@ export async function POST(request: Request) {
     const parsed = assignRotaSchema.safeParse(body)
     if (!parsed.success) {
       return jsonError(parsed.error.issues[0]?.message ?? 'Invalid input', 400)
+    }
+
+    const admin = createAdminClient() as unknown as PracticeRefAdmin
+    const userCheck = await assertUserInPractice(
+      admin,
+      member.practiceId,
+      parsed.data.userId
+    )
+    if (!userCheck.ok) {
+      return jsonError('Invalid staff member', 400)
+    }
+
+    const surgeryCheck = await assertSurgeryInPractice(
+      admin,
+      member.practiceId,
+      parsed.data.surgeryId
+    )
+    if (!surgeryCheck.ok) {
+      return jsonError('Invalid surgery', 400)
     }
 
     const { data, error } = await supabase

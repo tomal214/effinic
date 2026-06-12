@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import FetchErrorPanel from '@/components/app/FetchErrorPanel'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 type HistoryRow = {
   id: string
@@ -44,6 +46,7 @@ export default function TaskHistoryView({ readOnly }: { readOnly?: boolean }) {
   const [surgeries, setSurgeries] = useState<Surgery[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   const loadSurgeries = useCallback(async () => {
     try {
@@ -59,27 +62,31 @@ export default function TaskHistoryView({ readOnly }: { readOnly?: boolean }) {
 
   const loadHistory = useCallback(async () => {
     setLoading(true)
+    setFetchError('')
     try {
       const params = new URLSearchParams({ from, to })
       if (surgeryId !== 'all') params.set('surgeryId', surgeryId)
       const res = await fetch(`/api/tasks/history?${params}`)
-      if (res.ok) {
-        const { data } = await res.json()
-        setHistory(data.history ?? [])
+      if (!res.ok) {
+        setFetchError('Could not load task history. Check your connection and try again.')
+        return
       }
+      const { data } = await res.json()
+      setHistory(data.history ?? [])
     } catch (error) {
       console.error('Failed to load history:', error)
+      setFetchError('Could not load task history. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [from, to, surgeryId])
 
   useEffect(() => {
-    loadSurgeries()
+    runDeferredEffect(() => loadSurgeries())
   }, [loadSurgeries])
 
   useEffect(() => {
-    loadHistory()
+    runDeferredEffect(() => loadHistory())
   }, [loadHistory])
 
   const handleExport = async () => {
@@ -114,6 +121,10 @@ export default function TaskHistoryView({ readOnly }: { readOnly?: boolean }) {
           )}
         </p>
       </div>
+
+      {fetchError ? (
+        <FetchErrorPanel message={fetchError} onRetry={loadHistory} />
+      ) : null}
 
       <div className="flex flex-wrap items-end gap-4 rounded-xl border border-border bg-background p-5">
         <div className="flex flex-col gap-2">

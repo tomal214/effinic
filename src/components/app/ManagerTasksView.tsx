@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import TaskRow from '@/components/app/TaskRow'
 import TaskCompleteDialog from '@/components/app/TaskCompleteDialog'
 import SessionBanner from '@/components/app/SessionBanner'
+import FetchErrorPanel from '@/components/app/FetchErrorPanel'
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getMinutesUntilLock } from '@/lib/session/minutes-until-lock'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 import type { EnrichedTask } from '@/lib/services/tasks'
 
 type Surgery = { id: string; name: string }
@@ -25,38 +27,42 @@ export default function ManagerTasksView({ readOnly }: { readOnly?: boolean }) {
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState('')
 
   const loadTasks = useCallback(async () => {
     setLoading(true)
+    setFetchError('')
     try {
       const [tasksRes, surgeriesRes] = await Promise.all([
         fetch('/api/tasks'),
         fetch('/api/surgeries'),
       ])
 
-      if (tasksRes.ok) {
-        const { data } = await tasksRes.json()
-        setTasks(data.tasks ?? [])
-        setTaskDate(data.taskDate ?? '')
-        if (data.timezone) setTimezone(data.timezone)
+      if (!tasksRes.ok || !surgeriesRes.ok) {
+        setFetchError('Could not load tasks. Check your connection and try again.')
+        return
       }
 
-      if (surgeriesRes.ok) {
-        const { data } = await surgeriesRes.json()
-        const active = (data.surgeries ?? []).filter(
-          (s: Surgery & { is_active?: boolean }) => s.is_active !== false
-        )
-        setSurgeries(active)
-      }
+      const tasksBody = await tasksRes.json()
+      const surgeriesBody = await surgeriesRes.json()
+      setTasks(tasksBody.data?.tasks ?? [])
+      setTaskDate(tasksBody.data?.taskDate ?? '')
+      if (tasksBody.data?.timezone) setTimezone(tasksBody.data.timezone)
+
+      const active = (surgeriesBody.data?.surgeries ?? []).filter(
+        (s: Surgery & { is_active?: boolean }) => s.is_active !== false
+      )
+      setSurgeries(active)
     } catch (error) {
       console.error('Failed to load tasks:', error)
+      setFetchError('Could not load tasks. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    loadTasks()
+    runDeferredEffect(() => loadTasks())
   }, [loadTasks])
 
   const filteredTasks = useMemo(() => {
@@ -81,7 +87,6 @@ export default function ManagerTasksView({ readOnly }: { readOnly?: boolean }) {
   function handleSelectTask(task: EnrichedTask) {
     if (readOnly) return
     if (task.status === 'completed' && task.isLocked) return
-    if (task.status === 'completed') return
 
     setSelectedTask(task)
     setDialogOpen(true)
@@ -114,8 +119,11 @@ export default function ManagerTasksView({ readOnly }: { readOnly?: boolean }) {
         )}
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
         <SessionBanner session={session} minutesUntilLock={minutesUntilLock} />
+        {fetchError ? (
+          <FetchErrorPanel message={fetchError} onRetry={loadTasks} />
+        ) : null}
       </div>
 
       <div className="flex-1">

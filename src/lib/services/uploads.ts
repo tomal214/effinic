@@ -13,8 +13,7 @@ const BUCKET = 'task-evidence'
 export async function signTaskPhotoUpload(
   admin: AdminClient,
   member: CurrentMember,
-  taskId: string,
-  timezone: string
+  taskId: string
 ) {
   const { data: row } = await admin
     .from('daily_tasks')

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 type Surgery = { id: string; name: string }
 type Staff = { userId: string; fullName: string; role: string }
@@ -41,6 +42,7 @@ export default function RotaView() {
   const [allPublished, setAllPublished] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{
     surgeryId: string
@@ -50,12 +52,12 @@ export default function RotaView() {
 
   const loadRota = useCallback(async () => {
     setLoading(true)
-    setError(null)
+    setFetchError(null)
     try {
       const res = await fetch(`/api/rota?weekStart=${weekStart}`)
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? 'Failed to load rota')
+        setFetchError(json.error ?? 'Failed to load rota')
         return
       }
       const data = json.data
@@ -66,14 +68,14 @@ export default function RotaView() {
       setCanEdit(data.canEdit)
       setAllPublished(data.allPublished)
     } catch {
-      setError('Failed to load rota')
+      setFetchError('Failed to load rota')
     } finally {
       setLoading(false)
     }
   }, [weekStart])
 
   useEffect(() => {
-    loadRota()
+    runDeferredEffect(() => loadRota())
   }, [loadRota])
 
   function shiftWeek(delta: number) {
@@ -188,6 +190,21 @@ export default function RotaView() {
           )}
         </div>
       </div>
+
+      {fetchError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+          <p className="text-sm text-destructive">{fetchError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={loadRota}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
       {error && (
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">

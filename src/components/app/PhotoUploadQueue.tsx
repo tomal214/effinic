@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, Check, AlertCircle } from 'lucide-react'
 import { compressPhoto } from '@/lib/uploads/compress-photo'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 type QueueItem = {
   id: string
@@ -69,7 +70,6 @@ export default function PhotoUploadQueue({
     async function processQueue() {
       for (let index = 0; index < files.length; index++) {
         const file = files[index]
-        const itemId = `${Date.now()}-${index}`
 
         setItems((prev) =>
           prev.map((i) =>
@@ -98,7 +98,9 @@ export default function PhotoUploadQueue({
       }
     }
 
-    processQueue()
+    runDeferredEffect(() => {
+      processQueue()
+    })
   }, [files, taskId, onComplete])
 
   if (items.length === 0) return null

@@ -20,6 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import FetchErrorPanel from '@/components/app/FetchErrorPanel'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 type StaffMember = {
   id: string
@@ -48,24 +50,29 @@ export default function StaffView({ readOnly = false }: { readOnly?: boolean }) 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [fetchError, setFetchError] = useState('')
 
   const loadStaff = useCallback(async () => {
     setLoading(true)
+    setFetchError('')
     try {
       const res = await fetch('/api/staff')
-      if (res.ok) {
-        const { data } = await res.json()
-        setStaff(data.staff ?? [])
+      if (!res.ok) {
+        setFetchError('Could not load staff. Check your connection and try again.')
+        return
       }
+      const { data } = await res.json()
+      setStaff(data.staff ?? [])
     } catch (err) {
       console.error('Failed to load staff:', err)
+      setFetchError('Could not load staff. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    loadStaff()
+    runDeferredEffect(() => loadStaff())
   }, [loadStaff])
 
   async function handleCreate(event: React.FormEvent) {
@@ -130,6 +137,10 @@ export default function StaffView({ readOnly = false }: { readOnly?: boolean }) 
             : 'Manage practice members and PIN access.'}
         </p>
       </div>
+
+      {fetchError ? (
+        <FetchErrorPanel message={fetchError} onRetry={loadStaff} />
+      ) : null}
 
       {!readOnly && (
         <form

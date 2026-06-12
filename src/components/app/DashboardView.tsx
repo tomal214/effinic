@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -18,6 +19,7 @@ import type {
   SessionWarning,
   SurgeryBreakdown,
 } from '@/lib/services/dashboard'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 function StatCard({
   label,
@@ -171,7 +173,7 @@ export default function DashboardView({ readOnly }: { readOnly?: boolean }) {
   }, [])
 
   useEffect(() => {
-    load()
+    runDeferredEffect(() => load())
   }, [load])
 
   if (loading) {
@@ -188,8 +190,13 @@ export default function DashboardView({ readOnly }: { readOnly?: boolean }) {
 
   if (error || !dashboard) {
     return (
-      <div className="p-8 text-sm text-destructive">
-        {error || 'Dashboard unavailable'}
+      <div className="flex flex-1 flex-col gap-3 p-8">
+        <p className="text-sm text-destructive">
+          {error || 'Dashboard unavailable'}
+        </p>
+        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={load}>
+          Try again
+        </Button>
       </div>
     )
   }

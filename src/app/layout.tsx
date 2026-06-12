@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Effinic",
   description: "Dental clinic workflow app",
   manifest: "/manifest.webmanifest",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

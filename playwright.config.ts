@@ -18,6 +18,8 @@ function hasSupabaseEnv() {
 }
 
 const e2eEnabled = hasSupabaseEnv()
+const frozenTime =
+  process.env.TEST_FROZEN_TIME ?? '2026-06-12T14:00:00+01:00'
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -42,6 +44,10 @@ export default defineConfig({
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
+        env: {
+          ...process.env,
+          TEST_FROZEN_TIME: frozenTime,
+        },
       }
     : undefined,
 })

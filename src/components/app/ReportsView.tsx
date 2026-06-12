@@ -10,10 +10,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import WeekChart, { type WeekChartPoint } from '@/components/app/WeekChart'
+import FetchErrorPanel from '@/components/app/FetchErrorPanel'
 import {
   buildExportRange,
   pickDefaultWeekStart,
 } from '@/lib/reports/export-range'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 
 type WeekBucket = {
   weekStart: string
@@ -28,31 +30,36 @@ export default function ReportsView({ readOnly }: { readOnly?: boolean }) {
   const [selectedWeekStart, setSelectedWeekStart] = useState('')
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
+    setFetchError('')
     try {
       const res = await fetch(`/api/reports/weekly?weeks=${weekCount}`)
-      if (res.ok) {
-        const { data } = await res.json()
-        const rows = data.weeks ?? []
-        setWeeks(rows)
-        setSelectedWeekStart((prev) => {
-          if (prev && rows.some((w: WeekBucket) => w.weekStart === prev)) {
-            return prev
-          }
-          return pickDefaultWeekStart(rows)
-        })
+      if (!res.ok) {
+        setFetchError('Could not load reports. Check your connection and try again.')
+        return
       }
+      const { data } = await res.json()
+      const rows = data.weeks ?? []
+      setWeeks(rows)
+      setSelectedWeekStart((prev) => {
+        if (prev && rows.some((w: WeekBucket) => w.weekStart === prev)) {
+          return prev
+        }
+        return pickDefaultWeekStart(rows)
+      })
     } catch (error) {
       console.error('Failed to load reports:', error)
+      setFetchError('Could not load reports. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [weekCount])
 
   useEffect(() => {
-    load()
+    runDeferredEffect(() => load())
   }, [load])
 
   const chartData: WeekChartPoint[] = useMemo(
@@ -121,6 +128,10 @@ export default function ReportsView({ readOnly }: { readOnly?: boolean }) {
           </Select>
         </div>
       </div>
+
+      {fetchError ? (
+        <FetchErrorPanel message={fetchError} onRetry={load} />
+      ) : null}
 
       <div className="rounded-xl border border-border bg-background p-5">
         {loading ? (

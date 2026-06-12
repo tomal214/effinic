@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { DEMO, hasSupabaseEnv } from './helpers'
+import { hasSupabaseEnv, loginAsNurse } from './helpers'
 
 test.describe('session lock API', () => {
   test.skip(
@@ -7,23 +7,9 @@ test.describe('session lock API', () => {
     'Requires local Supabase — run supabase start && supabase db reset'
   )
 
-  test.skip(
-    !process.env.TEST_FROZEN_TIME,
-    'Set TEST_FROZEN_TIME=2026-06-12T14:00:00+01:00 on the dev server for this test'
-  )
-
   test('amend morning task returns 403 when session locked', async ({ page }) => {
-    await page.goto(DEMO.practiceUrl)
-    await page.getByRole('button', { name: 'Sarah Nurse' }).click()
-    await page.getByRole('button', { name: 'Continue' }).click()
-
-    for (const digit of DEMO.nursePin) {
-      await page.getByRole('button', { name: digit, exact: true }).click()
-    }
-
-    await page.getByRole('button', { name: 'Surgery 1' }).click()
-    await page.getByRole('button', { name: 'Start shift' }).click()
-    await expect(page).toHaveURL(/\/app\/tasks/)
+    test.setTimeout(60_000)
+    await loginAsNurse(page)
 
     const tasksRes = await page.request.get('/api/tasks')
     expect(tasksRes.ok()).toBeTruthy()

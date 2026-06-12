@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { runDeferredEffect } from '@/lib/react/defer-effect'
 import {
   Select,
   SelectContent,
@@ -54,6 +55,7 @@ export default function IncidentsView({
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState('incident')
@@ -65,24 +67,25 @@ export default function IncidentsView({
 
   const loadIncidents = useCallback(async () => {
     setLoading(true)
+    setFetchError(null)
     setError(null)
     try {
       const res = await fetch('/api/incidents')
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? 'Failed to load incidents')
+        setFetchError(json.error ?? 'Failed to load incidents')
         return
       }
       setIncidents(json.data.incidents)
     } catch {
-      setError('Failed to load incidents')
+      setFetchError('Failed to load incidents')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    loadIncidents()
+    runDeferredEffect(() => loadIncidents())
   }, [loadIncidents])
 
   async function handleCreate(e: React.FormEvent) {
@@ -164,6 +167,21 @@ export default function IncidentsView({
           </Button>
         )}
       </div>
+
+      {fetchError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+          <p className="text-sm text-destructive">{fetchError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={loadIncidents}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
       {error && (
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">

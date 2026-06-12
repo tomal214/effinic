@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { hasSupabaseEnv } from './helpers'
+import { hasSupabaseEnv, loginAsManager } from './helpers'
 
 test.describe('RLS isolation', () => {
   test.skip(
@@ -7,9 +7,23 @@ test.describe('RLS isolation', () => {
     'Requires local Supabase — run supabase start && supabase db reset'
   )
 
-  test('stub — cross-practice task access blocked', async () => {
-    // Full two-practice seed not yet available; document expected behaviour:
-    // a member of practice A cannot fetch practice B daily_task by ID via API.
-    expect(true).toBe(true)
+  test('unauthenticated task list returns 401', async ({ request }) => {
+    const res = await request.get('http://localhost:3000/api/tasks')
+    expect(res.status()).toBe(401)
+  })
+
+  test('manager cannot amend unknown task in another practice scope', async ({
+    page,
+  }) => {
+    await loginAsManager(page)
+
+    const res = await page.request.patch(
+      '/api/tasks/00000000-0000-0000-0000-000000000099',
+      { data: { notes: 'Cross-practice attempt' } }
+    )
+
+    expect(res.status()).toBe(404)
+    const body = await res.json()
+    expect(body.error).toMatch(/not found/i)
   })
 })

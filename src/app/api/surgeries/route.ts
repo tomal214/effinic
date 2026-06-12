@@ -9,6 +9,7 @@ import {
 import { jsonError, jsonOk } from '@/lib/api/response'
 import { createSurgerySchema } from '@/lib/validation/surgeries'
 import { createSurgery, listAllSurgeries } from '@/lib/services/surgeries'
+import { getNow } from '@/lib/clock'
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
       .single()
 
     const timezone = practice?.timezone ?? 'Europe/London'
-    const today = formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd')
+    const today = formatInTimeZone(getNow(), timezone, 'yyyy-MM-dd')
 
     const isManager = member.role === 'manager' || member.role === 'admin'
     const allSurgeries = await listAllSurgeries(admin, member.practiceId)

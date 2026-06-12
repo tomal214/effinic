@@ -42,6 +42,7 @@ type RawTaskRow = {
     is_mandatory: boolean
     checklist_steps: unknown
     assigned_user_id: string | null
+    compliance_file_url: string | null
   } | null
   surgeries: { name: string } | null
 }
@@ -70,6 +71,7 @@ export type EnrichedTask = {
   materialsUsed: string | null
   notes: string | null
   photoPaths: string[]
+  complianceFileUrl: string | null
 }
 
 function parseChecklistSteps(raw: unknown): string[] {
@@ -132,6 +134,7 @@ function enrichTask(
     materialsUsed: row.materials_used,
     notes: row.notes,
     photoPaths: parsePhotoPaths(row.photo_paths),
+    complianceFileUrl: template?.compliance_file_url ?? null,
   }
 }
 
@@ -183,7 +186,7 @@ export async function getTodayTasksForMember(
       id, practice_id, task_template_id, surgery_id, task_date,
       assigned_to, status, completed_at, completed_by,
       checklist_progress, start_time, end_time, materials_used, notes, photo_paths,
-      task_templates ( title, time_due, role_responsible, is_mandatory, checklist_steps, assigned_user_id ),
+      task_templates ( title, time_due, role_responsible, is_mandatory, checklist_steps, assigned_user_id, compliance_file_url ),
       surgeries ( name )
     `
     )
@@ -229,7 +232,7 @@ export async function getTaskForMember(
       id, practice_id, task_template_id, surgery_id, task_date,
       assigned_to, status, completed_at, completed_by,
       checklist_progress, start_time, end_time, materials_used, notes, photo_paths,
-      task_templates ( title, time_due, role_responsible, is_mandatory, checklist_steps, assigned_user_id ),
+      task_templates ( title, time_due, role_responsible, is_mandatory, checklist_steps, assigned_user_id, compliance_file_url ),
       surgeries ( name )
     `
     )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -23,15 +23,12 @@ export default function SurgerySwitcher({
   activeSurgeryId: string | null
   onSwitch?: (surgeryId: string) => void
 }) {
-  const [value, setValue] = useState(activeSurgeryId ?? '')
+  const [optimisticId, setOptimisticId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    setValue(activeSurgeryId ?? '')
-  }, [activeSurgeryId])
+  const value = optimisticId ?? activeSurgeryId ?? ''
 
   async function handleChange(surgeryId: string) {
-    setValue(surgeryId)
+    setOptimisticId(surgeryId)
     setLoading(true)
 
     try {
@@ -47,6 +44,7 @@ export default function SurgerySwitcher({
     } catch (error) {
       console.error('Surgery switch failed:', error)
     } finally {
+      setOptimisticId(null)
       setLoading(false)
     }
   }

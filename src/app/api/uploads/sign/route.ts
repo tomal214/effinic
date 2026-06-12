@@ -20,18 +20,10 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient()
-    const { data: practice } = await admin
-      .from('practices')
-      .select('timezone')
-      .eq('id', member.practiceId)
-      .single()
-
-    const timezone = practice?.timezone ?? 'Europe/London'
     const signed = await signTaskPhotoUpload(
       admin,
       member,
-      parsed.data.taskId,
-      timezone
+      parsed.data.taskId
     )
 
     if (!signed) {

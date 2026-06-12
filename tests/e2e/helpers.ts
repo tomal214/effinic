@@ -25,3 +25,35 @@ export async function loginAsManager(page: Page) {
   })
   await expect(page).toHaveURL(/\/app/, { timeout: 20_000 })
 }
+
+export async function loginAsNurse(
+  page: Page,
+  options?: { surgeryName?: string }
+) {
+  const surgeryName = options?.surgeryName ?? 'Surgery 1'
+
+  await page.goto(DEMO.practiceUrl)
+  await expect(page.getByRole('heading', { name: 'Who are you?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sarah Nurse' })).toBeVisible({
+    timeout: 20_000,
+  })
+  await page.getByRole('button', { name: 'Sarah Nurse' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  for (const digit of DEMO.nursePin) {
+    await page.getByRole('button', { name: digit, exact: true }).click()
+  }
+
+  await expect(
+    page.getByRole('heading', { name: 'Select your surgery' })
+  ).toBeVisible({ timeout: 20_000 })
+
+  const surgeryButton = page.getByRole('button', { name: surgeryName })
+  await expect(surgeryButton).toBeVisible({ timeout: 15_000 })
+  await surgeryButton.click()
+
+  const startShift = page.getByRole('button', { name: 'Start shift' })
+  await expect(startShift).toBeEnabled({ timeout: 10_000 })
+  await startShift.click()
+  await expect(page).toHaveURL(/\/app\/tasks/, { timeout: 30_000 })
+}
