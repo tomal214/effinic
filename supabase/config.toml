@@ -359,6 +359,10 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# Cron uses CRON_SECRET in function code — not a Supabase JWT.
+[functions.generate-daily-tasks]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
