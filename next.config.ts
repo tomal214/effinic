@@ -7,6 +7,7 @@ const withPWA = withPWAInit({
   register: true,
   workboxOptions: {
     skipWaiting: true,
+    navigateFallbackDenylist: [/^\/auth\//, /^\/login/, /^\/api\//],
   },
 })
 

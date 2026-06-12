@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   needsPasswordSetup,
   parseAuthHash,
+  parseHashSession,
 } from '@/lib/auth/parse-auth-hash'
 
 describe('parseAuthHash', () => {
@@ -31,5 +32,20 @@ describe('needsPasswordSetup', () => {
 
   it('returns true when invite query param set', () => {
     expect(needsPasswordSetup('', { inviteQuery: true })).toBe(true)
+  })
+})
+
+describe('parseHashSession', () => {
+  it('extracts access and refresh tokens from hash', () => {
+    expect(
+      parseHashSession('#access_token=abc&refresh_token=def&type=invite')
+    ).toEqual({
+      access_token: 'abc',
+      refresh_token: 'def',
+    })
+  })
+
+  it('returns null when tokens missing', () => {
+    expect(parseHashSession('#type=invite')).toBeNull()
   })
 })

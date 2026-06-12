@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { safeNext } from '@/lib/auth/safe-next'
+import { unregisterServiceWorkers } from '@/lib/auth/parse-auth-hash'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -20,7 +21,9 @@ export default function LoginForm() {
 
   useEffect(() => {
     if (window.location.hash.includes('access_token')) {
-      router.replace(`/auth/confirm${window.location.hash}`)
+      void unregisterServiceWorkers().then(() => {
+        router.replace(`/auth/confirm${window.location.hash}`)
+      })
     }
   }, [router])
 

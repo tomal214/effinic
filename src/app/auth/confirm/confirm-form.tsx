@@ -6,7 +6,12 @@ import Logo from '@/components/app/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { needsPasswordSetup } from '@/lib/auth/parse-auth-hash'
+import {
+  clearUrlHash,
+  needsPasswordSetup,
+  parseHashSession,
+  unregisterServiceWorkers,
+} from '@/lib/auth/parse-auth-hash'
 import { safeNext } from '@/lib/auth/safe-next'
 import { createClient } from '@/lib/supabase/client'
 
@@ -58,30 +63,42 @@ export default function ConfirmForm() {
     }
 
     let cancelled = false
-    const supabase = createClient()
     const hash = window.location.hash
     const setupRequired = needsPasswordSetup(hash, { inviteQuery })
-    const waitingForHash = hash.includes('access_token') || inviteQuery
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    async function bootstrap() {
+      if (hash.includes('access_token')) {
+        await unregisterServiceWorkers()
+      }
+
+      const supabase = createClient()
+      const tokens = parseHashSession(hash)
+
+      if (tokens) {
+        const { error: sessionError } = await supabase.auth.setSession(tokens)
+        if (cancelled) return
+
+        if (sessionError) {
+          console.error('Set session from invite hash failed:', sessionError)
+          setError('This link is invalid or has expired. Ask for a new invite.')
+          setStep('error')
+          return
+        }
+
+        clearUrlHash()
+      }
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
       if (cancelled) return
-      if (event !== 'INITIAL_SESSION' && event !== 'SIGNED_IN') return
 
-      if (!session) {
-        if (event === 'INITIAL_SESSION' && waitingForHash) return
+      if (sessionError || !session) {
         setError('This link is invalid or has expired. Ask for a new invite.')
         setStep('error')
         return
-      }
-
-      if (hash) {
-        window.history.replaceState(
-          null,
-          '',
-          window.location.pathname + window.location.search
-        )
       }
 
       if (setupRequired) {
@@ -90,11 +107,29 @@ export default function ConfirmForm() {
       }
 
       await finishSignup()
-    })
+    }
+
+    const timeout = window.setTimeout(() => {
+      if (cancelled) return
+      setError('This is taking too long. Try opening the invite link in a private window.')
+      setStep('error')
+    }, 15000)
+
+    bootstrap()
+      .catch((err) => {
+        console.error('Invite confirm bootstrap failed:', err)
+        if (!cancelled) {
+          setError('Something went wrong. Try again or ask for a new invite.')
+          setStep('error')
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(timeout)
+      })
 
     return () => {
       cancelled = true
-      subscription.unsubscribe()
+      window.clearTimeout(timeout)
     }
   }, [finishSignup, inviteQuery, next, router, searchParams])
 
