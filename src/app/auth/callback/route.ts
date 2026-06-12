@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { linkManagerToPractice } from '@/lib/auth/link-manager-to-practice'
+import { safeNext } from '@/lib/auth/safe-next'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/app'
+  const next = safeNext(searchParams.get('next'))
 
   if (code) {
     const supabase = await createClient()
@@ -20,42 +21,13 @@ export async function GET(request: Request) {
     } = await supabase.auth.getUser()
 
     if (user) {
-      const practiceId = user.user_metadata?.practice_id as string | undefined
-      if (practiceId) {
-        const admin = createAdminClient()
-        const fullName =
-          (user.user_metadata?.full_name as string | undefined) ??
-          user.email?.split('@')[0] ??
-          'Manager'
+      const result = await linkManagerToPractice(user)
 
-        await admin.from('profiles').upsert({
-          id: user.id,
-          full_name: fullName,
-        })
-
-        const { data: existing } = await admin
-          .from('practice_members')
-          .select('id')
-          .eq('practice_id', practiceId)
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (!existing) {
-          await admin.from('practice_members').insert({
-            practice_id: practiceId,
-            user_id: user.id,
-            role: 'manager',
-          })
-        }
-
-        if (user.email) {
-          await admin
-            .from('practice_invites')
-            .update({ used_at: new Date().toISOString() })
-            .eq('practice_id', practiceId)
-            .eq('email', user.email)
-            .is('used_at', null)
-        }
+      if (user.invited_at && result.linked && !result.alreadyMember) {
+        const confirmUrl = new URL(`${origin}/auth/confirm`)
+        confirmUrl.searchParams.set('invite', '1')
+        confirmUrl.searchParams.set('next', next)
+        return NextResponse.redirect(confirmUrl.toString())
       }
     }
   }

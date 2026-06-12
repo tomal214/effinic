@@ -31,7 +31,7 @@ Also confirm these point at **hosted Supabase** (not local):
 | Field | Value |
 |-------|--------|
 | **Site URL** | `https://effinic.vercel.app` |
-| **Redirect URLs** | `https://effinic.vercel.app/auth/callback` |
+| **Redirect URLs** | `https://effinic.vercel.app/auth/callback` and `https://effinic.vercel.app/auth/confirm` |
 
 Add preview URLs later if needed, e.g. `https://*.vercel.app/auth/callback`.
 

@@ -43,7 +43,7 @@ export async function POST(
       .from('practice_invites')
       .insert({
         practice_id: practiceId,
-        email: parsed.data.email,
+        email: parsed.data.email.toLowerCase(),
         role: 'manager',
         expires_at: expiresAt.toISOString(),
         created_by: user.id,
@@ -56,10 +56,13 @@ export async function POST(
       return jsonError('Failed to create invite', 500)
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(
+      /\/$/,
+      ''
+    )
     const { data: authData, error: authError } =
       await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
-        redirectTo: `${siteUrl}/auth/callback`,
+        redirectTo: `${siteUrl}/auth/confirm`,
         data: {
           practice_id: practiceId,
           full_name: parsed.data.email.split('@')[0],

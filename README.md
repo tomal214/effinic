@@ -98,7 +98,7 @@ Schedule a daily cron in the Supabase dashboard (≈ 05:00 local per practice ti
 
 1. Create a project (London region recommended)
 2. Run migrations: `supabase db push`
-3. Set Auth redirect URLs: `https://app.effinic.com/auth/callback`
+3. Set Auth redirect URLs: `https://app.effinic.com/auth/callback` and `https://app.effinic.com/auth/confirm`
 4. Configure invite email templates for manager onboarding
 
 ### DNS
@@ -107,6 +107,7 @@ Point `app.effinic.com` CNAME to your Vercel deployment.
 
 ## Docs
 
+- **[Roles & login](docs/roles-and-login.md)** — platform admin, practice roles, how to add users
 - [Demo script](docs/demo-script.md)
 - [MySQL → Postgres migration stub](docs/migration/mysql-to-postgres.md)
 - [Hostinger photos migration stub](docs/migration/hostinger-photos.md)
