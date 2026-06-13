@@ -34,8 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
-# vercel
-.vercel
+# PWA build artifacts (regenerated on `pnpm build`)
+public/sw.js
+public/workbox-*.js
 
 # typescript
 *.tsbuildinfo

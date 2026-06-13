@@ -1,0 +1,19 @@
+import {
+  AppPageLoadingShell,
+  PageHeaderSkeleton,
+} from '@/components/app/loading/page-shell'
+import { Skeleton } from '@/components/ui/skeleton'
+
+export default function DashboardLoadingSkeleton() {
+  return (
+    <AppPageLoadingShell label="Loading dashboard">
+      <PageHeaderSkeleton />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+      </div>
+      <Skeleton className="h-48 w-full rounded-xl" />
+      <Skeleton className="h-48 w-full rounded-xl" />
+    </AppPageLoadingShell>
+  )
+}
