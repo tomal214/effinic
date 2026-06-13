@@ -3,6 +3,12 @@ import type { Database } from '@/types/database'
 
 export type MemberRole = Database['public']['Enums']['member_role']
 
+const PASSWORD_LOGIN_ROLES: MemberRole[] = ['manager', 'admin']
+
+export function usesPasswordLogin(role: MemberRole) {
+  return PASSWORD_LOGIN_ROLES.includes(role)
+}
+
 export type CurrentMember = {
   memberId: string
   practiceId: string

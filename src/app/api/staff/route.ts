@@ -16,7 +16,22 @@ export async function GET() {
     const admin = createAdminClient()
 
     const staff = await listStaff(admin, member.practiceId)
-    return jsonOk({ staff })
+
+    const { data: practice } = await admin
+      .from('practices')
+      .select('slug, practice_token')
+      .eq('id', member.practiceId)
+      .single()
+
+    return jsonOk({
+      staff,
+      practice: practice
+        ? {
+            slug: practice.slug,
+            practiceUrl: `/p/${practice.slug}/${practice.practice_token}`,
+          }
+        : null,
+    })
   } catch (error) {
     if (error instanceof MemberAuthError) {
       return jsonError(error.message, error.status)

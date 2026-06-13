@@ -31,6 +31,11 @@ type StaffMember = {
   isActive: boolean
 }
 
+type PracticeInfo = {
+  slug: string
+  practiceUrl: string
+}
+
 const ROLES = [
   'admin',
   'manager',
@@ -43,6 +48,8 @@ const ROLES = [
 
 export default function StaffView({ readOnly = false }: { readOnly?: boolean }) {
   const [staff, setStaff] = useState<StaffMember[]>([])
+  const [practiceInfo, setPracticeInfo] = useState<PracticeInfo | null>(null)
+  const [siteOrigin, setSiteOrigin] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('nurse')
@@ -63,12 +70,17 @@ export default function StaffView({ readOnly = false }: { readOnly?: boolean }) 
       }
       const { data } = await res.json()
       setStaff(data.staff ?? [])
+      setPracticeInfo(data.practice ?? null)
     } catch (err) {
       console.error('Failed to load staff:', err)
       setFetchError('Could not load staff. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    setSiteOrigin(window.location.origin)
   }, [])
 
   useEffect(() => {
@@ -137,6 +149,22 @@ export default function StaffView({ readOnly = false }: { readOnly?: boolean }) 
             : 'Manage practice members and PIN access.'}
         </p>
       </div>
+
+      {practiceInfo ? (
+        <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm">
+          <p>
+            <span className="font-medium">Practice slug:</span>{' '}
+            <span className="font-mono text-muted-foreground">{practiceInfo.slug}</span>
+          </p>
+          <p className="mt-2">
+            <span className="font-medium">Nurse kiosk URL:</span>{' '}
+            <span className="break-all font-mono text-muted-foreground">
+              {siteOrigin}
+              {practiceInfo.practiceUrl}
+            </span>
+          </p>
+        </div>
+      ) : null}
 
       {fetchError ? (
         <FetchErrorPanel message={fetchError} onRetry={loadStaff} />
