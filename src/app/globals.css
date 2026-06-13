@@ -111,6 +111,11 @@
   --sidebar-accent-foreground: var(--color-ink);
   --sidebar-border: var(--color-rule);
   --sidebar-ring: var(--color-accent);
+
+  --app-mobile-nav-height: 3.5rem;
+  --app-mobile-nav-offset: calc(
+    var(--app-mobile-nav-height) + env(safe-area-inset-bottom, 0px)
+  );
 }
 
 
@@ -157,5 +162,17 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .app-main {
+    padding-bottom: var(--app-mobile-nav-offset);
+  }
+
+  @media (min-width: 768px) {
+    .app-main {
+      padding-bottom: 0;
+    }
   }
 }

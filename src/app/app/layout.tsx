@@ -29,12 +29,14 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-canvas">
+    <div className="flex min-h-full flex-col bg-canvas md:flex-row">
       <AppNav role={member.role} readOnly={member.role === 'viewer'} />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
-        {children}
-      </main>
-      <Toaster />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <main className="app-main flex w-full flex-1 flex-col md:mx-auto md:max-w-5xl">
+          {children}
+        </main>
+        <Toaster />
+      </div>
     </div>
   )
 }

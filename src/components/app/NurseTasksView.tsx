@@ -194,7 +194,7 @@ export default function NurseTasksView() {
         )}
       </div>
 
-      <div className="sticky bottom-0 mt-6 flex flex-col gap-2 border-t border-border bg-canvas pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="sticky bottom-[var(--app-mobile-nav-offset)] z-30 mt-6 flex flex-col gap-2 border-t border-border bg-canvas pt-4 pb-4 md:bottom-0 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
         {showMorningSignOff && (
           <Button
             type="button"
