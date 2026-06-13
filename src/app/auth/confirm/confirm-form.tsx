@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   clearUrlHash,
-  needsPasswordSetup,
   parseHashSession,
   unregisterServiceWorkers,
 } from '@/lib/auth/parse-auth-hash'
@@ -17,11 +16,15 @@ import { createClient } from '@/lib/supabase/client'
 
 type Step = 'loading' | 'password' | 'linking' | 'error'
 
+type OnboardingStatus = {
+  needsPassword: boolean
+  ready: boolean
+}
+
 export default function ConfirmForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = safeNext(searchParams.get('next'))
-  const inviteQuery = searchParams.get('invite') === '1'
 
   const [step, setStep] = useState<Step>('loading')
   const [password, setPassword] = useState('')
@@ -64,7 +67,6 @@ export default function ConfirmForm() {
 
     let cancelled = false
     const hash = window.location.hash
-    const setupRequired = needsPasswordSetup(hash, { inviteQuery })
 
     async function bootstrap() {
       if (hash.includes('access_token')) {
@@ -101,7 +103,25 @@ export default function ConfirmForm() {
         return
       }
 
-      if (setupRequired) {
+      const statusRes = await fetch('/api/auth/onboarding-status')
+      if (cancelled) return
+
+      if (!statusRes.ok) {
+        setError('Could not verify your invite. Try again or ask for a new invite.')
+        setStep('error')
+        return
+      }
+
+      const payload = await statusRes.json()
+      const status = payload.data as OnboardingStatus
+
+      if (status.ready) {
+        router.push(next)
+        router.refresh()
+        return
+      }
+
+      if (status.needsPassword) {
         setStep('password')
         return
       }
@@ -131,7 +151,7 @@ export default function ConfirmForm() {
       cancelled = true
       window.clearTimeout(timeout)
     }
-  }, [finishSignup, inviteQuery, next, router, searchParams])
+  }, [finishSignup, next, router, searchParams])
 
   async function handleSetPassword(event: React.FormEvent) {
     event.preventDefault()
@@ -151,7 +171,10 @@ export default function ConfirmForm() {
 
     try {
       const supabase = createClient()
-      const { error: updateError } = await supabase.auth.updateUser({ password })
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+        data: { password_set: true },
+      })
 
       if (updateError) {
         setError(updateError.message)

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentMember } from '@/lib/auth/member'
+import { isPasswordSet } from '@/lib/auth/onboarding-status'
 import AppNav from '@/components/app/AppNav'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -10,10 +11,17 @@ export default async function AppLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   const member = await getCurrentMember(supabase)
 
   if (!member) {
     redirect('/login')
+  }
+
+  if (user && !isPasswordSet(user)) {
+    redirect('/auth/confirm?invite=1')
   }
 
   return (

@@ -41,20 +41,33 @@ export default function LoginForm() {
       })
 
       if (signInError) {
-        setError(signInError.message === 'Invalid login credentials'
-          ? 'Invalid email or password'
-          : signInError.message)
+        setError(
+          signInError.message === 'Invalid login credentials'
+            ? 'Invalid email or password'
+            : signInError.message
+        )
+        setLoading(false)
         return
       }
+
+      await supabase.auth.updateUser({ data: { password_set: true } })
 
       router.push(next)
       router.refresh()
     } catch (err) {
       console.error('Login failed:', err)
       setError('Something went wrong. Check Supabase is running.')
-    } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center bg-background px-5 py-12">
+        <Logo className="mb-6 justify-center" size="lg" />
+        <p className="text-sm text-muted-foreground">Signing in…</p>
+      </div>
+    )
   }
 
   return (
@@ -96,8 +109,8 @@ export default function LoginForm() {
             </p>
           )}
 
-          <Button type="submit" className="h-11 w-full" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+          <Button type="submit" className="h-11 w-full">
+            Sign in
           </Button>
         </form>
       </div>
