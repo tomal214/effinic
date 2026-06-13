@@ -14,16 +14,64 @@ import type { EnrichedTask } from '@/lib/services/tasks'
 
 type Surgery = { id: string; name: string }
 
-export default function NurseTasksView() {
+type TasksPageData = {
+  tasks: EnrichedTask[]
+  taskDate: string
+  timezone: string
+}
+
+type SurgeriesPageData = {
+  surgeries: (Surgery & { is_active?: boolean })[]
+  defaultSurgeryId: string | null
+}
+
+function applyTasksPageData(
+  tasksData: TasksPageData,
+  surgeriesData: SurgeriesPageData,
+  setTasks: (tasks: EnrichedTask[]) => void,
+  setTaskDate: (date: string) => void,
+  setTimezone: (tz: string) => void,
+  setSurgeries: (surgeries: Surgery[]) => void,
+  setActiveSurgeryId?: (id: string | null) => void
+) {
+  setTasks(tasksData.tasks ?? [])
+  setTaskDate(tasksData.taskDate ?? '')
+  if (tasksData.timezone) setTimezone(tasksData.timezone)
+
+  const active = (surgeriesData.surgeries ?? []).filter(
+    (s) => s.is_active !== false
+  )
+  setSurgeries(active)
+  if (setActiveSurgeryId) {
+    setActiveSurgeryId(surgeriesData.defaultSurgeryId ?? null)
+  }
+}
+
+export default function NurseTasksView({
+  initialData,
+}: {
+  initialData?: { tasks: TasksPageData; surgeries: SurgeriesPageData }
+}) {
   const router = useRouter()
-  const [tasks, setTasks] = useState<EnrichedTask[]>([])
-  const [taskDate, setTaskDate] = useState('')
-  const [timezone, setTimezone] = useState('Europe/London')
-  const [surgeries, setSurgeries] = useState<Surgery[]>([])
-  const [activeSurgeryId, setActiveSurgeryId] = useState<string | null>(null)
+  const [tasks, setTasks] = useState<EnrichedTask[]>(
+    initialData?.tasks.tasks ?? []
+  )
+  const [taskDate, setTaskDate] = useState(initialData?.tasks.taskDate ?? '')
+  const [timezone, setTimezone] = useState(
+    initialData?.tasks.timezone ?? 'Europe/London'
+  )
+  const [surgeries, setSurgeries] = useState<Surgery[]>(() => {
+    if (!initialData) return []
+    return (initialData.surgeries.surgeries ?? []).filter(
+      (s) => s.is_active !== false
+    )
+  })
+  const [activeSurgeryId, setActiveSurgeryId] = useState<string | null>(
+    initialData?.surgeries.defaultSurgeryId ?? null
+  )
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
   const [signOffError, setSignOffError] = useState('')
   const [signingOff, setSigningOff] = useState(false)
   const [fetchError, setFetchError] = useState('')
@@ -44,15 +92,22 @@ export default function NurseTasksView() {
 
       const tasksBody = await tasksRes.json()
       const surgeriesBody = await surgeriesRes.json()
-      setTasks(tasksBody.data?.tasks ?? [])
-      setTaskDate(tasksBody.data?.taskDate ?? '')
-      if (tasksBody.data?.timezone) setTimezone(tasksBody.data.timezone)
-
-      const active = (surgeriesBody.data?.surgeries ?? []).filter(
-        (s: Surgery & { is_active?: boolean }) => s.is_active !== false
+      applyTasksPageData(
+        {
+          tasks: tasksBody.data?.tasks ?? [],
+          taskDate: tasksBody.data?.taskDate ?? '',
+          timezone: tasksBody.data?.timezone ?? 'Europe/London',
+        },
+        {
+          surgeries: surgeriesBody.data?.surgeries ?? [],
+          defaultSurgeryId: surgeriesBody.data?.defaultSurgeryId ?? null,
+        },
+        setTasks,
+        setTaskDate,
+        setTimezone,
+        setSurgeries,
+        setActiveSurgeryId
       )
-      setSurgeries(active)
-      setActiveSurgeryId(surgeriesBody.data?.defaultSurgeryId ?? null)
     } catch (error) {
       console.error('Failed to load tasks:', error)
       setFetchError('Could not load tasks. Check your connection and try again.')
@@ -62,8 +117,9 @@ export default function NurseTasksView() {
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => loadTasks())
-  }, [loadTasks])
+  }, [loadTasks, initialData])
 
   const session = useMemo(() => {
     const morningTasks = tasks.filter((t) => t.session === 'morning')

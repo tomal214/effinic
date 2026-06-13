@@ -47,12 +47,16 @@ const statusVariant: Record<
 export default function IncidentsView({
   canCreate,
   canManage,
+  initialData,
 }: {
   canCreate: boolean
   canManage: boolean
+  initialData?: { incidents: Incident[] }
 }) {
-  const [incidents, setIncidents] = useState<Incident[]>([])
-  const [loading, setLoading] = useState(true)
+  const [incidents, setIncidents] = useState<Incident[]>(
+    initialData?.incidents ?? []
+  )
+  const [loading, setLoading] = useState(!initialData)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -85,8 +89,9 @@ export default function IncidentsView({
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => loadIncidents())
-  }, [loadIncidents])
+  }, [loadIncidents, initialData])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()

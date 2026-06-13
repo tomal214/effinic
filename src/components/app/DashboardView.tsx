@@ -147,10 +147,20 @@ function BreakdownTable({
   )
 }
 
-export default function DashboardView({ readOnly }: { readOnly?: boolean }) {
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
-  const [taskDate, setTaskDate] = useState('')
-  const [loading, setLoading] = useState(true)
+export default function DashboardView({
+  readOnly,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: { dashboard: DashboardData; timezone: string }
+}) {
+  const [dashboard, setDashboard] = useState<DashboardData | null>(
+    initialData?.dashboard ?? null
+  )
+  const [taskDate, setTaskDate] = useState(
+    initialData?.dashboard?.taskDate ?? ''
+  )
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -173,8 +183,9 @@ export default function DashboardView({ readOnly }: { readOnly?: boolean }) {
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => load())
-  }, [load])
+  }, [load, initialData])
 
   if (loading) {
     return (

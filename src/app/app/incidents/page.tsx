@@ -1,24 +1,26 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentMember } from '@/lib/auth/member'
+import { getAuthContext } from '@/lib/auth/member'
 import {
   canCreateIncident,
   canManageIncidents,
 } from '@/lib/incidents/access'
+import { loadIncidentsPageData } from '@/lib/app/page-data'
 import IncidentsView from '@/components/app/IncidentsView'
 
 export default async function IncidentsPage() {
-  const supabase = await createClient()
-  const member = await getCurrentMember(supabase)
+  const { supabase, member } = await getAuthContext()
 
   if (!member) {
     redirect('/login')
   }
 
+  const initialData = await loadIncidentsPageData(supabase, member)
+
   return (
     <IncidentsView
       canCreate={canCreateIncident(member.role)}
       canManage={canManageIncidents(member.role)}
+      initialData={initialData}
     />
   )
 }

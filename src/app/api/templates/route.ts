@@ -7,15 +7,15 @@ import {
 } from '@/lib/auth/member'
 import { jsonError, jsonOk } from '@/lib/api/response'
 import { createTemplateSchema } from '@/lib/validation/templates'
-import { createTemplate, listTemplates } from '@/lib/services/templates'
+import { createTemplate } from '@/lib/services/templates'
+import { loadTemplatesPageData } from '@/lib/app/page-data'
 
 export async function GET() {
   try {
     const supabase = await createClient()
     const member = await requireManagerViewerOrAdmin(supabase)
-    const admin = createAdminClient()
+    const { templates } = await loadTemplatesPageData(member)
 
-    const templates = await listTemplates(admin, member.practiceId)
     return jsonOk({ templates })
   } catch (error) {
     if (error instanceof MemberAuthError) {

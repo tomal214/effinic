@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { addWeeks, format, parseISO, startOfWeek, subWeeks } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -30,17 +30,36 @@ function mondayOf(date: Date) {
   return startOfWeek(date, { weekStartsOn: 1 })
 }
 
-export default function RotaView() {
-  const [weekStart, setWeekStart] = useState(() =>
-    format(mondayOf(new Date()), 'yyyy-MM-dd')
+export default function RotaView({
+  initialData,
+}: {
+  initialData?: {
+    weekStart: string
+    dates: string[]
+    surgeries: Surgery[]
+    assignments: Assignment[]
+    staff: Staff[]
+    allPublished: boolean
+    canEdit: boolean
+  }
+}) {
+  const [weekStart, setWeekStart] = useState(
+    initialData?.weekStart ?? format(mondayOf(new Date()), 'yyyy-MM-dd')
   )
-  const [dates, setDates] = useState<string[]>([])
-  const [surgeries, setSurgeries] = useState<Surgery[]>([])
-  const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [staff, setStaff] = useState<Staff[]>([])
-  const [canEdit, setCanEdit] = useState(false)
-  const [allPublished, setAllPublished] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [dates, setDates] = useState<string[]>(initialData?.dates ?? [])
+  const [surgeries, setSurgeries] = useState<Surgery[]>(
+    initialData?.surgeries ?? []
+  )
+  const [assignments, setAssignments] = useState<Assignment[]>(
+    initialData?.assignments ?? []
+  )
+  const [staff, setStaff] = useState<Staff[]>(initialData?.staff ?? [])
+  const [canEdit, setCanEdit] = useState(initialData?.canEdit ?? false)
+  const [allPublished, setAllPublished] = useState(
+    initialData?.allPublished ?? false
+  )
+  const [loading, setLoading] = useState(!initialData)
+  const skippedInitialLoad = useRef(!!initialData)
   const [error, setError] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
@@ -75,6 +94,10 @@ export default function RotaView() {
   }, [weekStart])
 
   useEffect(() => {
+    if (skippedInitialLoad.current) {
+      skippedInitialLoad.current = false
+      return
+    }
     runDeferredEffect(() => loadRota())
   }, [loadRota])
 

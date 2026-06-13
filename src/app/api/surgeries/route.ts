@@ -1,4 +1,3 @@
-import { formatInTimeZone } from 'date-fns-tz'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -8,51 +7,17 @@ import {
 } from '@/lib/auth/member'
 import { jsonError, jsonOk } from '@/lib/api/response'
 import { createSurgerySchema } from '@/lib/validation/surgeries'
-import { createSurgery, listAllSurgeries } from '@/lib/services/surgeries'
-import { getNow } from '@/lib/clock'
+import { createSurgery } from '@/lib/services/surgeries'
+import { loadSurgeriesData } from '@/lib/app/page-data'
 
 export async function GET() {
   try {
     const supabase = await createClient()
     const member = await requireMember(supabase)
     const admin = createAdminClient()
+    const data = await loadSurgeriesData(admin, member)
 
-    const { data: practice } = await admin
-      .from('practices')
-      .select('timezone')
-      .eq('id', member.practiceId)
-      .single()
-
-    const timezone = practice?.timezone ?? 'Europe/London'
-    const today = formatInTimeZone(getNow(), timezone, 'yyyy-MM-dd')
-
-    const isManager = member.role === 'manager' || member.role === 'admin'
-    const allSurgeries = await listAllSurgeries(admin, member.practiceId)
-    const surgeries = isManager
-      ? allSurgeries
-      : allSurgeries.filter((s) => s.is_active)
-
-    const { data: rota } = await admin
-      .from('rota_assignments')
-      .select('surgery_id')
-      .eq('practice_id', member.practiceId)
-      .eq('user_id', member.userId)
-      .eq('shift_date', today)
-      .eq('is_published', true)
-      .limit(1)
-      .maybeSingle()
-
-    const activeSurgeries = surgeries.filter((s) => s.is_active)
-    const defaultSurgeryId =
-      rota?.surgery_id ??
-      member.activeSurgeryId ??
-      activeSurgeries[0]?.id ??
-      null
-
-    return jsonOk({
-      surgeries,
-      defaultSurgeryId,
-    })
+    return jsonOk(data)
   } catch (error) {
     if (error instanceof MemberAuthError) {
       return jsonError(error.message, error.status)

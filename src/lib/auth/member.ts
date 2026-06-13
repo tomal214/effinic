@@ -1,5 +1,7 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { cache } from 'react'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
+import { createClient } from '@/lib/supabase/server'
 
 export type MemberRole = Database['public']['Enums']['member_role']
 
@@ -11,14 +13,16 @@ export type CurrentMember = {
   activeSurgeryId: string | null
 }
 
-export async function getCurrentMember(
+export type AuthContext = {
   supabase: SupabaseClient<Database>
-): Promise<CurrentMember | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
+  user: User | null
+  member: CurrentMember | null
+}
 
+async function memberFromUser(
+  supabase: SupabaseClient<Database>,
+  user: User
+): Promise<CurrentMember | null> {
   const { data: member } = await supabase
     .from('practice_members')
     .select('id, practice_id, user_id, role, active_surgery_id')
@@ -35,6 +39,39 @@ export async function getCurrentMember(
     role: member.role,
     activeSurgeryId: member.active_surgery_id,
   }
+}
+
+export const getAuthContext = cache(async (): Promise<AuthContext> => {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { supabase, user: null, member: null }
+  }
+
+  const member = await memberFromUser(supabase, user)
+  return { supabase, user, member }
+})
+
+export async function getCurrentMember(
+  supabase?: SupabaseClient<Database>
+): Promise<CurrentMember | null> {
+  if (!supabase) {
+    return (await getAuthContext()).member
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  return memberFromUser(supabase, user)
+}
+
+export async function getAuthUser(): Promise<User | null> {
+  return (await getAuthContext()).user
 }
 
 export async function requireMember(

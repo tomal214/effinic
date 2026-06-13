@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { getCurrentMember } from '@/lib/auth/member'
 
 export async function requireManagerPage() {
-  const supabase = await createClient()
-  const member = await getCurrentMember(supabase)
+  const member = await getCurrentMember()
 
   if (!member) {
     redirect('/login')
@@ -18,8 +16,7 @@ export async function requireManagerPage() {
 }
 
 export async function requireManagerOrViewerPage() {
-  const supabase = await createClient()
-  const member = await getCurrentMember(supabase)
+  const member = await getCurrentMember()
 
   if (!member) {
     redirect('/login')

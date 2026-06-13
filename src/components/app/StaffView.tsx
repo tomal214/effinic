@@ -46,15 +46,23 @@ const ROLES = [
   'viewer',
 ]
 
-export default function StaffView({ readOnly = false }: { readOnly?: boolean }) {
-  const [staff, setStaff] = useState<StaffMember[]>([])
-  const [practiceInfo, setPracticeInfo] = useState<PracticeInfo | null>(null)
+export default function StaffView({
+  readOnly = false,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: { staff: StaffMember[]; practice: PracticeInfo | null }
+}) {
+  const [staff, setStaff] = useState<StaffMember[]>(initialData?.staff ?? [])
+  const [practiceInfo, setPracticeInfo] = useState<PracticeInfo | null>(
+    initialData?.practice ?? null
+  )
   const [siteOrigin, setSiteOrigin] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('nurse')
   const [newPin, setNewPin] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [fetchError, setFetchError] = useState('')
@@ -84,8 +92,9 @@ export default function StaffView({ readOnly = false }: { readOnly?: boolean }) 
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => loadStaff())
-  }, [loadStaff])
+  }, [loadStaff, initialData])
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -24,11 +24,22 @@ type WeekBucket = {
   incidentCount: number
 }
 
-export default function ReportsView({ readOnly }: { readOnly?: boolean }) {
-  const [weeks, setWeeks] = useState<WeekBucket[]>([])
+export default function ReportsView({
+  readOnly,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: { weeks: WeekBucket[] }
+}) {
+  const [weeks, setWeeks] = useState<WeekBucket[]>(initialData?.weeks ?? [])
   const [weekCount, setWeekCount] = useState('8')
-  const [selectedWeekStart, setSelectedWeekStart] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() =>
+    initialData?.weeks?.length
+      ? pickDefaultWeekStart(initialData.weeks)
+      : ''
+  )
+  const [loading, setLoading] = useState(!initialData)
+  const skippedInitialLoad = useRef(!!initialData)
   const [exporting, setExporting] = useState(false)
   const [fetchError, setFetchError] = useState('')
 
@@ -59,6 +70,10 @@ export default function ReportsView({ readOnly }: { readOnly?: boolean }) {
   }, [weekCount])
 
   useEffect(() => {
+    if (skippedInitialLoad.current) {
+      skippedInitialLoad.current = false
+      return
+    }
     runDeferredEffect(() => load())
   }, [load])
 

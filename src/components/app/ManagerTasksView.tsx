@@ -18,15 +18,40 @@ import type { EnrichedTask } from '@/lib/services/tasks'
 
 type Surgery = { id: string; name: string }
 
-export default function ManagerTasksView({ readOnly }: { readOnly?: boolean }) {
-  const [tasks, setTasks] = useState<EnrichedTask[]>([])
-  const [taskDate, setTaskDate] = useState('')
-  const [timezone, setTimezone] = useState('Europe/London')
-  const [surgeries, setSurgeries] = useState<Surgery[]>([])
+export default function ManagerTasksView({
+  readOnly,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: {
+    tasks: {
+      tasks: EnrichedTask[]
+      taskDate: string
+      timezone: string
+    }
+    surgeries: {
+      surgeries: (Surgery & { is_active?: boolean })[]
+      defaultSurgeryId: string | null
+    }
+  }
+}) {
+  const [tasks, setTasks] = useState<EnrichedTask[]>(
+    initialData?.tasks.tasks ?? []
+  )
+  const [taskDate, setTaskDate] = useState(initialData?.tasks.taskDate ?? '')
+  const [timezone, setTimezone] = useState(
+    initialData?.tasks.timezone ?? 'Europe/London'
+  )
+  const [surgeries, setSurgeries] = useState<Surgery[]>(() => {
+    if (!initialData) return []
+    return (initialData.surgeries.surgeries ?? []).filter(
+      (s) => s.is_active !== false
+    )
+  })
   const [surgeryFilter, setSurgeryFilter] = useState('all')
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
   const [fetchError, setFetchError] = useState('')
 
   const loadTasks = useCallback(async () => {
@@ -62,8 +87,9 @@ export default function ManagerTasksView({ readOnly }: { readOnly?: boolean }) {
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => loadTasks())
-  }, [loadTasks])
+  }, [loadTasks, initialData])
 
   const filteredTasks = useMemo(() => {
     if (surgeryFilter === 'all') return tasks

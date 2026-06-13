@@ -7,31 +7,16 @@ import {
 } from '@/lib/auth/member'
 import { jsonError, jsonOk } from '@/lib/api/response'
 import { createStaffSchema } from '@/lib/validation/staff'
-import { createStaff, listStaff } from '@/lib/services/staff'
+import { createStaff } from '@/lib/services/staff'
+import { loadStaffPageData } from '@/lib/app/page-data'
 
 export async function GET() {
   try {
     const supabase = await createClient()
     const member = await requireManagerViewerOrAdmin(supabase)
-    const admin = createAdminClient()
+    const data = await loadStaffPageData(member)
 
-    const staff = await listStaff(admin, member.practiceId)
-
-    const { data: practice } = await admin
-      .from('practices')
-      .select('slug, practice_token')
-      .eq('id', member.practiceId)
-      .single()
-
-    return jsonOk({
-      staff,
-      practice: practice
-        ? {
-            slug: practice.slug,
-            practiceUrl: `/p/${practice.slug}/${practice.practice_token}`,
-          }
-        : null,
-    })
+    return jsonOk(data)
   } catch (error) {
     if (error instanceof MemberAuthError) {
       return jsonError(error.message, error.status)

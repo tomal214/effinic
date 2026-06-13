@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentMember } from '@/lib/auth/member'
+import { getAuthContext } from '@/lib/auth/member'
 import { isPasswordSet } from '@/lib/auth/onboarding-status'
 import AppNav from '@/components/app/AppNav'
 import { Toaster } from '@/components/ui/sonner'
@@ -10,11 +9,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const member = await getCurrentMember(supabase)
+  const { user, member } = await getAuthContext()
 
   if (!member) {
     redirect('/login')

@@ -23,10 +23,18 @@ type Surgery = {
   sort_order: number
 }
 
-export default function SurgeriesView({ readOnly = false }: { readOnly?: boolean }) {
-  const [surgeries, setSurgeries] = useState<Surgery[]>([])
+export default function SurgeriesView({
+  readOnly = false,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: { surgeries: Surgery[] }
+}) {
+  const [surgeries, setSurgeries] = useState<Surgery[]>(
+    initialData?.surgeries ?? []
+  )
   const [name, setName] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [fetchError, setFetchError] = useState('')
@@ -51,8 +59,9 @@ export default function SurgeriesView({ readOnly = false }: { readOnly?: boolean
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => loadSurgeries())
-  }, [loadSurgeries])
+  }, [loadSurgeries, initialData])
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault()

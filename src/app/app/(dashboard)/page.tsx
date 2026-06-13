@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { getCurrentMember } from '@/lib/auth/member'
+import { loadDashboardPageData } from '@/lib/app/page-data'
 import DashboardView from '@/components/app/DashboardView'
 
 const DASHBOARD_ROLES = [
@@ -12,8 +12,7 @@ const DASHBOARD_ROLES = [
 ]
 
 export default async function AppHomePage() {
-  const supabase = await createClient()
-  const member = await getCurrentMember(supabase)
+  const member = await getCurrentMember()
 
   if (!member) {
     redirect('/login')
@@ -27,5 +26,12 @@ export default async function AppHomePage() {
     redirect('/app/tasks')
   }
 
-  return <DashboardView readOnly={member.role === 'viewer'} />
+  const initialData = await loadDashboardPageData(member)
+
+  return (
+    <DashboardView
+      readOnly={member.role === 'viewer'}
+      initialData={initialData}
+    />
+  )
 }

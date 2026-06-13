@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { format, subDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,14 +37,28 @@ type HistoryRow = {
 
 type Surgery = { id: string; name: string }
 
-export default function TaskHistoryView({ readOnly }: { readOnly?: boolean }) {
+export default function TaskHistoryView({
+  readOnly,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: {
+    history: HistoryRow[]
+    surgeries: Surgery[]
+    from: string
+    to: string
+    surgeryId: string
+  }
+}) {
   const today = format(new Date(), 'yyyy-MM-dd')
-  const [from, setFrom] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'))
-  const [to, setTo] = useState(today)
-  const [surgeryId, setSurgeryId] = useState('all')
-  const [history, setHistory] = useState<HistoryRow[]>([])
-  const [surgeries, setSurgeries] = useState<Surgery[]>([])
-  const [loading, setLoading] = useState(true)
+  const [from, setFrom] = useState(initialData?.from ?? format(subDays(new Date(), 7), 'yyyy-MM-dd'))
+  const [to, setTo] = useState(initialData?.to ?? today)
+  const [surgeryId, setSurgeryId] = useState(initialData?.surgeryId ?? 'all')
+  const [history, setHistory] = useState<HistoryRow[]>(initialData?.history ?? [])
+  const [surgeries, setSurgeries] = useState<Surgery[]>(initialData?.surgeries ?? [])
+  const [loading, setLoading] = useState(!initialData)
+  const skippedInitialHistoryLoad = useRef(!!initialData)
+  const skippedInitialSurgeriesLoad = useRef(!!initialData)
   const [exporting, setExporting] = useState(false)
   const [fetchError, setFetchError] = useState('')
 
@@ -82,10 +96,18 @@ export default function TaskHistoryView({ readOnly }: { readOnly?: boolean }) {
   }, [from, to, surgeryId])
 
   useEffect(() => {
+    if (skippedInitialSurgeriesLoad.current) {
+      skippedInitialSurgeriesLoad.current = false
+      return
+    }
     runDeferredEffect(() => loadSurgeries())
   }, [loadSurgeries])
 
   useEffect(() => {
+    if (skippedInitialHistoryLoad.current) {
+      skippedInitialHistoryLoad.current = false
+      return
+    }
     runDeferredEffect(() => loadHistory())
   }, [loadHistory])
 

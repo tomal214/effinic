@@ -46,9 +46,27 @@ const ROLES = [
   'viewer',
 ]
 
-export default function TemplatesView({ readOnly = false }: { readOnly?: boolean }) {
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [surgeries, setSurgeries] = useState<Surgery[]>([])
+export default function TemplatesView({
+  readOnly = false,
+  initialData,
+}: {
+  readOnly?: boolean
+  initialData?: {
+    templates: Array<Omit<Template, 'checklist_steps'> & { checklist_steps: unknown }>
+    surgeries: Surgery[]
+  }
+}) {
+  const [templates, setTemplates] = useState<Template[]>(
+    (initialData?.templates ?? []).map((template) => ({
+      ...template,
+      checklist_steps: Array.isArray(template.checklist_steps)
+        ? template.checklist_steps
+        : [],
+    }))
+  )
+  const [surgeries, setSurgeries] = useState<Surgery[]>(
+    initialData?.surgeries ?? []
+  )
   const [title, setTitle] = useState('')
   const [timeDue, setTimeDue] = useState('')
   const [roleResponsible, setRoleResponsible] = useState('nurse')
@@ -56,7 +74,7 @@ export default function TemplatesView({ readOnly = false }: { readOnly?: boolean
   const [checklistText, setChecklistText] = useState('')
   const [isMandatory, setIsMandatory] = useState(true)
   const [complianceFileUrl, setComplianceFileUrl] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialData)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [fetchError, setFetchError] = useState('')
@@ -92,8 +110,9 @@ export default function TemplatesView({ readOnly = false }: { readOnly?: boolean
   }, [])
 
   useEffect(() => {
+    if (initialData) return
     runDeferredEffect(() => loadData())
-  }, [loadData])
+  }, [loadData, initialData])
 
   function toggleSurgery(surgeryId: string, checked: boolean) {
     setSurgeryIds((prev) =>

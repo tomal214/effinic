@@ -30,10 +30,14 @@ export async function listStaff(admin: AdminClient, practiceId: string) {
       profileMap.set(profile.id, profile.full_name)
     }
 
-    for (const userId of userIds) {
-      const { data: userData } = await admin.auth.admin.getUserById(userId)
-      if (userData.user?.email) {
-        emailMap.set(userId, userData.user.email)
+    const userResults = await Promise.all(
+      userIds.map((userId) => admin.auth.admin.getUserById(userId))
+    )
+
+    for (let i = 0; i < userIds.length; i++) {
+      const email = userResults[i]?.data.user?.email
+      if (email) {
+        emailMap.set(userIds[i], email)
       }
     }
   }

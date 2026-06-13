@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentMember } from '@/lib/auth/member'
+import { getAuthContext } from '@/lib/auth/member'
+import {
+  defaultRotaWeekStart,
+  loadRotaPageData,
+} from '@/lib/app/page-data'
 import RotaView from '@/components/app/RotaView'
 
 export default async function RotaPage() {
-  const supabase = await createClient()
-  const member = await getCurrentMember(supabase)
+  const { supabase, member } = await getAuthContext()
 
   if (!member) {
     redirect('/login')
@@ -16,5 +18,8 @@ export default async function RotaPage() {
     redirect('/app')
   }
 
-  return <RotaView />
+  const weekStart = defaultRotaWeekStart()
+  const initialData = await loadRotaPageData(supabase, member, weekStart)
+
+  return <RotaView initialData={initialData} />
 }
