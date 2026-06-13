@@ -182,6 +182,7 @@ export default function ConfirmForm() {
         return
       }
 
+      await supabase.auth.refreshSession()
       await finishSignup()
     } catch (err) {
       console.error('Set password failed:', err)

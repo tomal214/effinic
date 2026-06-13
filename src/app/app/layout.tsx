@@ -21,7 +21,7 @@ export default async function AppLayout({
   }
 
   if (user && !isPasswordSet(user)) {
-    redirect('/auth/confirm?invite=1')
+    redirect(`/auth/confirm?next=${encodeURIComponent('/app')}`)
   }
 
   return (

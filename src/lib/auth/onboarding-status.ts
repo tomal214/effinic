@@ -43,9 +43,7 @@ export async function getOnboardingStatus(user: User): Promise<OnboardingStatus>
   }
 
   const hasPracticeMember = Boolean(member)
-  const needsPassword =
-    !passwordSet &&
-    (hasPendingInvite || !hasPracticeMember || Boolean(user.invited_at))
+  const needsPassword = !passwordSet
   const ready = hasPracticeMember && passwordSet
 
   return {

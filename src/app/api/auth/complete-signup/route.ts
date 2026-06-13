@@ -15,6 +15,10 @@ export async function POST() {
       return jsonError('Unauthorized', 401)
     }
 
+    if (!isPasswordSet(user)) {
+      return jsonError('Set a password before continuing', 400)
+    }
+
     const result = await linkManagerToPractice(user)
 
     if (!result.linked) {
@@ -28,10 +32,6 @@ export async function POST() {
         )
       }
       return jsonError('Could not finish account setup', 500)
-    }
-
-    if (!result.alreadyMember && !isPasswordSet(user)) {
-      return jsonError('Set a password before continuing', 400)
     }
 
     return jsonOk({

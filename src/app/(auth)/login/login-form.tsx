@@ -22,7 +22,8 @@ export default function LoginForm() {
   useEffect(() => {
     if (window.location.hash.includes('access_token')) {
       void unregisterServiceWorkers().then(() => {
-        router.replace(`/auth/confirm${window.location.hash}`)
+        const search = window.location.search
+        router.replace(`/auth/confirm${search}${window.location.hash}`)
       })
     }
   }, [router])
