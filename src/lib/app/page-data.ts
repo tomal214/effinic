@@ -20,6 +20,9 @@ import { listTemplates } from '@/lib/services/templates'
 type AdminClient = SupabaseClient<Database>
 type Supabase = SupabaseClient<Database>
 
+// Page loaders for RSC first paint. Client views refresh via matching GET /api routes
+// that call these same functions — see AGENTS.md § "App data loading".
+
 export async function loadSurgeriesData(
   admin: AdminClient,
   member: CurrentMember

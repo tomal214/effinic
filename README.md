@@ -81,7 +81,7 @@ Schedule a daily cron in the Supabase dashboard (≈ 05:00 local per practice ti
 
 ## PWA
 
-- Managers: `public/manifest.webmanifest` (`start_url: /login`)
+- Managers: `public/manifest.webmanifest` (`start_url: /app`; middleware sends unauthenticated users to `/login`)
 - Nurses: dynamic manifest at `/api/manifest/practice/{slug}/{token}` (`start_url` → practice URL)
 
 `@ducanh2912/next-pwa` is configured in `next.config.ts` (disabled in development).

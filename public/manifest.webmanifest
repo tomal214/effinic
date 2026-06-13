@@ -1,7 +1,7 @@
 {
   "name": "Effinic",
   "short_name": "Effinic",
-  "start_url": "/login",
+  "start_url": "/app",
   "display": "standalone",
   "theme_color": "oklch(0.58 0.14 175)",
   "background_color": "oklch(0.975 0.010 82)",

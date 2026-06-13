@@ -154,7 +154,7 @@ PWA launch URL depends on how the device was installed:
 | Device | Install from | start_url |
 |--------|--------------|-----------|
 | **Nurse iPad** | `/p/{slug}/{token}` | Dynamic manifest: `/api/manifest/practice/{slug}/{token}` → start_url returns that practice URL |
-| **Manager laptop** | `/login` or `/app` | Static manifest: `start_url: /login` |
+| **Manager laptop** | `/login` or `/app` | Static manifest: `start_url: /app` (session check on `/login` redirects to app when already signed in) |
 
 iOS Safari uses the page URL at install time; Android uses manifest `start_url`. Both paths are supported.
 
