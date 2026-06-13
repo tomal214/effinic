@@ -63,7 +63,7 @@ export async function createStaff(
   const { data: authUser, error: authError } = await admin.auth.admin.createUser({
     email,
     email_confirm: true,
-    user_metadata: { full_name: input.fullName, login_method: 'pin' },
+    user_metadata: { full_name: input.fullName },
   })
 
   if (authError || !authUser.user) {

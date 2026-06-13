@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentMember, usesPasswordLogin } from '@/lib/auth/member'
+import { getCurrentMember } from '@/lib/auth/member'
 import { isPasswordSet } from '@/lib/auth/onboarding-status'
 import AppNav from '@/components/app/AppNav'
 import { Toaster } from '@/components/ui/sonner'
@@ -20,7 +20,11 @@ export default async function AppLayout({
     redirect('/login')
   }
 
-  if (user && usesPasswordLogin(member.role) && !isPasswordSet(user)) {
+  if (
+    user &&
+    (member.role === 'manager' || member.role === 'admin') &&
+    !isPasswordSet(user)
+  ) {
     redirect(`/auth/confirm?next=${encodeURIComponent('/app')}`)
   }
 
