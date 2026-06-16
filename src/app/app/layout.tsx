@@ -1,8 +1,12 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getAuthContext } from '@/lib/auth/member'
 import { isPasswordSet } from '@/lib/auth/onboarding-status'
 import AppNav from '@/components/app/AppNav'
 import { Toaster } from '@/components/ui/sonner'
+import { managerPwaMetadata } from '@/lib/pwa/manager-metadata'
+
+export const metadata: Metadata = managerPwaMetadata
 
 export default async function AppLayout({
   children,

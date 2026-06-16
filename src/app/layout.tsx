@@ -6,14 +6,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Effinic",
   description: "Dental clinic workflow app",
-  manifest: "/manifest.webmanifest",
   icons: {
     apple: "/apple-touch-icon.png",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Effinic",
   },
 };
 
