@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -22,6 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import FetchErrorPanel from '@/components/app/FetchErrorPanel'
 import { runDeferredEffect } from '@/lib/react/defer-effect'
+import { updateStaffSchema } from '@/lib/validation/staff'
 
 type StaffMember = {
   id: string
@@ -66,6 +75,12 @@ export default function StaffView({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [fetchError, setFetchError] = useState('')
+  const [editingMember, setEditingMember] = useState<StaffMember | null>(null)
+  const [editFullName, setEditFullName] = useState('')
+  const [editRole, setEditRole] = useState('nurse')
+  const [editIsActive, setEditIsActive] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [editError, setEditError] = useState('')
 
   const loadStaff = useCallback(async () => {
     setLoading(true)
@@ -144,6 +159,53 @@ export default function StaffView({
   async function handleDeactivate(memberId: string) {
     const res = await fetch(`/api/staff/${memberId}`, { method: 'DELETE' })
     if (res.ok) await loadStaff()
+  }
+
+  function openEdit(member: StaffMember) {
+    setEditError('')
+    setEditingMember(member)
+    setEditFullName(member.fullName ?? '')
+    setEditRole(member.role ?? 'nurse')
+    setEditIsActive(member.isActive ?? true)
+  }
+
+  async function handleSaveEdit() {
+    if (!editingMember) return
+    setEditing(true)
+    setEditError('')
+
+    try {
+      const parsed = updateStaffSchema.safeParse({
+        fullName: editFullName,
+        role: editRole,
+        isActive: editIsActive,
+      })
+
+      if (!parsed.success) {
+        setEditError(parsed.error.issues[0]?.message ?? 'Invalid request')
+        return
+      }
+
+      const res = await fetch(`/api/staff/${editingMember.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
+      })
+      const body = await res.json()
+
+      if (!res.ok) {
+        setEditError(body.error ?? 'Failed to update staff')
+        return
+      }
+
+      setEditingMember(null)
+      await loadStaff()
+    } catch (err) {
+      console.error('Update staff failed:', err)
+      setEditError('Something went wrong')
+    } finally {
+      setEditing(false)
+    }
   }
 
   const colSpan = readOnly ? 4 : 5
@@ -278,6 +340,16 @@ export default function StaffView({
                         type="button"
                         variant="outline"
                         size="sm"
+                        className="h-11"
+                        onClick={() => openEdit(member)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-11"
                         onClick={() => handleResetPin(member.id)}
                         disabled={!member.isActive}
                       >
@@ -287,6 +359,7 @@ export default function StaffView({
                         type="button"
                         variant="destructive"
                         size="sm"
+                        className="h-11"
                         onClick={() => handleDeactivate(member.id)}
                         disabled={!member.isActive}
                       >
@@ -300,6 +373,78 @@ export default function StaffView({
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        open={!!editingMember}
+        onOpenChange={(open) => !open && setEditingMember(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit staff member</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-full-name">Full name</Label>
+              <Input
+                id="edit-full-name"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={editRole} onValueChange={(v) => v && setEditRole(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={editIsActive}
+                onCheckedChange={(checked) => setEditIsActive(checked === true)}
+              />
+              Active
+            </label>
+
+            {editError ? (
+              <p className="text-sm text-danger" role="alert">
+                {editError}
+              </p>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditingMember(null)}
+              disabled={editing}
+              className="h-11"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveEdit}
+              disabled={editing}
+              className="h-11 rounded-full"
+            >
+              {editing ? 'Saving…' : 'Save changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
