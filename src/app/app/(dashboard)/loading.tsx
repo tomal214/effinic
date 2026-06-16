@@ -1,5 +1,5 @@
-import DashboardLoadingSkeleton from '@/components/app/loading/dashboard-skeleton'
+import BrandedBootScreen from '@/components/app/loading/branded-boot-screen'
 
 export default function DashboardLoading() {
-  return <DashboardLoadingSkeleton />
+  return <BrandedBootScreen message="Loading dashboard…" />
 }

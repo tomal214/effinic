@@ -175,4 +175,27 @@
       padding-bottom: 0;
     }
   }
+
+  #effinic-boot {
+    display: none;
+  }
+
+  @media (display-mode: standalone) {
+    #effinic-boot {
+      display: flex;
+    }
+  }
+
+  .boot-progress-bar {
+    animation: boot-progress-slide 1.15s ease-in-out infinite;
+  }
+
+  @keyframes boot-progress-slide {
+    0% {
+      transform: translateX(-120%);
+    }
+    100% {
+      transform: translateX(320%);
+    }
+  }
 }

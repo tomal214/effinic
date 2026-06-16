@@ -160,7 +160,10 @@ export default function NurseLoginPage({
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-background px-5 py-8">
+    <div
+      data-kiosk-shell
+      className="flex min-h-full flex-col bg-background px-5 py-8"
+    >
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <Logo className="mb-10" size="lg" />
 

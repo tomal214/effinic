@@ -1,5 +1,5 @@
-import TaskListLoadingSkeleton from '@/components/app/loading/task-list-skeleton'
+import BrandedBootScreen from '@/components/app/loading/branded-boot-screen'
 
 export default function TasksLoading() {
-  return <TaskListLoadingSkeleton />
+  return <BrandedBootScreen message="Loading tasks…" />
 }
