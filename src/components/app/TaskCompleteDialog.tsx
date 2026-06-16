@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Camera, ExternalLink, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -13,13 +13,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import PhotoUploadQueue from '@/components/app/PhotoUploadQueue'
+import PhotoUploadQueue, {
+  type PhotoQueueItem,
+  type PhotoUploadStatus,
+} from '@/components/app/PhotoUploadQueue'
 import type { EnrichedTask } from '@/lib/services/tasks'
 import {
   formatTimeForInput,
   getTaskDialogMode,
 } from '@/lib/tasks/task-dialog-mode'
 import { evidenceSatisfied } from '@/lib/tasks/evidence'
+import {
+  canSubmitWithPhotos,
+  photoSubmitBlockReason,
+} from '@/lib/tasks/photo-submit'
+
+const EMPTY_UPLOAD_STATUS: PhotoUploadStatus = {
+  isUploading: false,
+  hasErrors: false,
+  pendingCount: 0,
+  doneCount: 0,
+}
 
 function TaskCompleteForm({
   task,
@@ -39,11 +53,15 @@ function TaskCompleteForm({
   const [endTime, setEndTime] = useState(formatTimeForInput(task.endTime))
   const [materials, setMaterials] = useState(task.materialsUsed ?? '')
   const [notes, setNotes] = useState(task.notes ?? '')
-  const [photos, setPhotos] = useState<File[]>([])
+  const [photoQueue, setPhotoQueue] = useState<PhotoQueueItem[]>([])
+  const [uploadStatus, setUploadStatus] =
+    useState<PhotoUploadStatus>(EMPTY_UPLOAD_STATUS)
   const [photoPaths, setPhotoPaths] = useState<string[]>(task.photoPaths ?? [])
   const [signedPhotoUrls, setSignedPhotoUrls] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const libraryInputRef = useRef<HTMLInputElement>(null)
 
   const checklistComplete = useMemo(() => {
     if (!task.checklistSteps.length) return true
@@ -56,6 +74,10 @@ function TaskCompleteForm({
       photoCount: photoPaths.length,
     })
   }, [task.evidenceRequired, checklistComplete, photoPaths.length])
+
+  const photosReady = canSubmitWithPhotos(uploadStatus, photoQueue.length)
+  const photoBlockReason = photoSubmitBlockReason(uploadStatus, photoQueue.length)
+  const canSubmit = evidenceOk && photosReady
 
   useEffect(() => {
     if (mode !== 'view' || photoPaths.length === 0) return
@@ -86,10 +108,27 @@ function TaskCompleteForm({
     setChecklist((prev) => ({ ...prev, [step]: checked }))
   }
 
+  function addPhotos(files: FileList | File[]) {
+    const selected = Array.from(files)
+    if (!selected.length) return
+
+    setPhotoQueue((prev) => [
+      ...prev,
+      ...selected.map((file, index) => ({
+        id: `${Date.now()}-${index}-${file.name}`,
+        file,
+      })),
+    ])
+  }
+
   function handlePhotoSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const selected = event.target.files
-    if (!selected?.length) return
-    setPhotos(Array.from(selected))
+    if (!event.target.files?.length) return
+    addPhotos(event.target.files)
+    event.target.value = ''
+  }
+
+  function handleRemoveQueuedPhoto(id: string) {
+    setPhotoQueue((prev) => prev.filter((item) => item.id !== id))
   }
 
   async function handleSubmit() {
@@ -97,6 +136,15 @@ function TaskCompleteForm({
 
     setSubmitting(true)
     setError('')
+
+    if (!photosReady) {
+      setSubmitting(false)
+      setError(
+        photoBlockReason ??
+          'Wait for photo uploads to finish before completing this task.'
+      )
+      return
+    }
 
     if (!evidenceOk) {
       setSubmitting(false)
@@ -244,27 +292,67 @@ function TaskCompleteForm({
           />
         </div>
 
-        {!readOnly && mode === 'complete' ? (
-          <div className="space-y-1.5">
-            <Label htmlFor="photos">Photos</Label>
-            <Input
-              id="photos"
+        {!readOnly && (mode === 'complete' || mode === 'amend') ? (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Photos</Label>
+              {task.evidenceRequired.includes('photo') ? (
+                <p className="text-xs text-muted-foreground">
+                  A photo is required for this task.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Optional — add evidence photos before completing.
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                className="min-h-11 gap-2 rounded-full"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera className="size-4" aria-hidden />
+                Take photo
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 gap-2 rounded-full"
+                onClick={() => libraryInputRef.current?.click()}
+              >
+                <ImagePlus className="size-4" aria-hidden />
+                Choose photo
+              </Button>
+            </div>
+
+            <input
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
-              multiple
+              className="sr-only"
               onChange={handlePhotoSelect}
+            />
+            <input
+              ref={libraryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              onChange={handlePhotoSelect}
+            />
+
+            <PhotoUploadQueue
+              taskId={task.id}
+              items={photoQueue}
+              onComplete={(path) => setPhotoPaths((prev) => [...prev, path])}
+              onStatusChange={setUploadStatus}
+              onRemove={handleRemoveQueuedPhoto}
             />
           </div>
         ) : null}
-
-        {photos.length > 0 && (
-          <PhotoUploadQueue
-            taskId={task.id}
-            files={photos}
-            onComplete={(path) => setPhotoPaths((prev) => [...prev, path])}
-          />
-        )}
 
         {readOnly && photoPaths.length > 0 ? (
           <div className="space-y-2">
@@ -298,6 +386,18 @@ function TaskCompleteForm({
           </div>
         ) : null}
 
+        {!readOnly && photoBlockReason && !error ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            {photoBlockReason}
+          </p>
+        ) : null}
+
+        {!readOnly && !evidenceOk && task.evidenceRequired.includes('photo') ? (
+          <p className="text-sm text-muted-foreground">
+            Add at least one photo before completing this task.
+          </p>
+        ) : null}
+
         {error && (
           <p className="text-sm text-danger" role="alert">
             {error}
@@ -318,10 +418,10 @@ function TaskCompleteForm({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !canSubmit}
             className="rounded-full"
           >
-            {submitLabel}
+            {uploadStatus.isUploading ? 'Uploading photos…' : submitLabel}
           </Button>
         ) : null}
       </DialogFooter>
