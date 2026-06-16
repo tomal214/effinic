@@ -4,14 +4,13 @@ import { Button } from '@/components/ui/button'
 import TaskRow from '@/components/app/TaskRow'
 import TaskCompleteDialog from '@/components/app/TaskCompleteDialog'
 import SessionBanner from '@/components/app/SessionBanner'
-import SurgerySwitcher from '@/components/app/SurgerySwitcher'
 import FetchErrorPanel from '@/components/app/FetchErrorPanel'
-import type { EnrichedTask } from '@/lib/services/tasks'
 import useTasksPage from '@/lib/tasks/use-tasks-page'
 import TaskProgressHeader from '@/components/tasks/TaskProgressHeader'
 import TaskCategoryFilter from '@/components/tasks/TaskCategoryFilter'
 import TaskSection from '@/components/tasks/TaskSection'
 import type { TaskCategory } from '@/lib/tasks/categories'
+import type { EnrichedTask } from '@/lib/services/tasks'
 
 type Surgery = { id: string; name: string }
 
@@ -26,7 +25,7 @@ type SurgeriesPageData = {
   defaultSurgeryId: string | null
 }
 
-export default function NurseTasksView({
+export default function ReceptionTasksView({
   initialData,
 }: {
   initialData?: { tasks: TasksPageData; surgeries: SurgeriesPageData }
@@ -39,8 +38,6 @@ export default function NurseTasksView({
     signOffError,
     signingOff,
     loadTasks,
-    surgeries,
-    activeSurgeryId,
     session,
     minutesUntilLock,
     category,
@@ -57,41 +54,29 @@ export default function NurseTasksView({
     handleEndDay,
     showMorningSignOff,
     showEndDay,
-  } = useTasksPage({ initialData, showSurgerySwitcher: true })
+  } = useTasksPage({ initialData, showSurgerySwitcher: false })
 
   return (
     <div className="flex flex-1 flex-col px-5 pb-8 pt-5 md:px-8">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold">Today&apos;s tasks</h1>
-          <div className="mt-2">
-            <TaskProgressHeader
-              completedCount={completedCount}
-              totalCount={tasks.length}
-              dateLabel={taskDate}
-            />
-          </div>
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold">Today&apos;s tasks</h1>
+        <div className="mt-2">
+          <TaskProgressHeader
+            completedCount={completedCount}
+            totalCount={tasks.length}
+            dateLabel={taskDate}
+          />
         </div>
-        <SurgerySwitcher
-          surgeries={surgeries}
-          activeSurgeryId={activeSurgeryId}
-          onSwitch={() => loadTasks()}
-        />
       </div>
 
       <div className="mb-4 space-y-3">
-        <SessionBanner
-          session={session}
-          minutesUntilLock={minutesUntilLock}
-        />
-        {signOffError && (
+        <SessionBanner session={session} minutesUntilLock={minutesUntilLock} />
+        {signOffError ? (
           <p className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {signOffError}
           </p>
-        )}
-        {fetchError ? (
-          <FetchErrorPanel message={fetchError} onRetry={loadTasks} />
         ) : null}
+        {fetchError ? <FetchErrorPanel message={fetchError} onRetry={loadTasks} /> : null}
       </div>
 
       <div className="mb-4">
@@ -123,6 +108,8 @@ export default function NurseTasksView({
                       key={task.id}
                       task={task}
                       onSelect={handleSelectTask}
+                      showStepCount
+                      className="py-5"
                     />
                   ))}
                 </div>
@@ -141,6 +128,8 @@ export default function NurseTasksView({
                       key={task.id}
                       task={task}
                       onSelect={handleSelectTask}
+                      showStepCount
+                      className="py-5"
                     />
                   ))}
                 </div>
@@ -155,7 +144,7 @@ export default function NurseTasksView({
       </div>
 
       <div className="sticky bottom-[var(--app-mobile-nav-offset)] z-30 mt-6 flex flex-col gap-2 border-t border-border bg-canvas pt-4 pb-4 md:bottom-0 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {showMorningSignOff && (
+        {showMorningSignOff ? (
           <Button
             type="button"
             variant="outline"
@@ -165,8 +154,8 @@ export default function NurseTasksView({
           >
             End morning session
           </Button>
-        )}
-        {showEndDay && (
+        ) : null}
+        {showEndDay ? (
           <Button
             type="button"
             className="h-12 rounded-full"
@@ -175,7 +164,7 @@ export default function NurseTasksView({
           >
             End day / Sign off
           </Button>
-        )}
+        ) : null}
       </div>
 
       <TaskCompleteDialog
@@ -187,3 +176,4 @@ export default function NurseTasksView({
     </div>
   )
 }
+

@@ -3,7 +3,10 @@
 import { Lock, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import TaskMetaBadges from '@/components/tasks/TaskMetaBadges'
 import type { EnrichedTask } from '@/lib/services/tasks'
+import { evidenceLabel } from '@/lib/tasks/evidence'
+import { categoryLabel } from '@/lib/tasks/categories'
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-muted text-muted-foreground',
@@ -27,12 +30,18 @@ function formatDueTime(timeDue: string | null) {
 export default function TaskRow({
   task,
   onSelect,
+  showStepCount,
+  className,
 }: {
   task: EnrichedTask
   onSelect: (task: EnrichedTask) => void
+  showStepCount?: boolean
+  className?: string
 }) {
   const locked = task.status === 'completed' && task.isLocked
   const statusKey = task.computedStatus
+  const stepsCount =
+    showStepCount && task.checklistSteps.length > 0 ? task.checklistSteps.length : 0
 
   return (
     <button
@@ -43,7 +52,8 @@ export default function TaskRow({
         'flex w-full items-start gap-3 border-b border-border px-1 py-4 text-left transition-colors',
         locked
           ? 'cursor-not-allowed opacity-60'
-          : 'hover:bg-muted/50 active:bg-muted'
+          : 'hover:bg-muted/50 active:bg-muted',
+        className
       )}
     >
       <div className="mt-1 flex shrink-0 flex-col items-center gap-1">
@@ -71,6 +81,24 @@ export default function TaskRow({
           <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
             {formatDueTime(task.timeDue)}
           </span>
+        </div>
+        {task.description ? (
+          <p className="mt-1 truncate text-sm text-muted-foreground">
+            {task.description}
+          </p>
+        ) : null}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <TaskMetaBadges
+            priority={task.priority}
+            isMandatory={task.isMandatory}
+            evidenceLabel={evidenceLabel(task.evidenceRequired)}
+            categoryLabel={categoryLabel(task.category)}
+          />
+          {stepsCount ? (
+            <Badge variant="outline" className="rounded-full">
+              {stepsCount} steps
+            </Badge>
+          ) : null}
         </div>
         {task.surgeryName && (
           <p className="mt-1 text-sm text-muted-foreground">

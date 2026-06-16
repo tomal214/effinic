@@ -3,6 +3,7 @@ import { getCurrentMember } from '@/lib/auth/member'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadSurgeriesData, loadTasksData } from '@/lib/app/page-data'
 import NurseTasksView from '@/components/app/NurseTasksView'
+import ReceptionTasksView from '@/components/app/ReceptionTasksView'
 import ManagerTasksView from '@/components/app/ManagerTasksView'
 
 const NURSE_ROLES = new Set(['nurse', 'receptionist'])
@@ -21,6 +22,9 @@ export default async function TasksPage() {
   const initialData = { tasks: tasksData, surgeries: surgeriesData }
 
   if (NURSE_ROLES.has(member.role)) {
+    if (member.role === 'receptionist') {
+      return <ReceptionTasksView initialData={initialData} />
+    }
     return <NurseTasksView initialData={initialData} />
   }
 
