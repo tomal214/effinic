@@ -78,6 +78,10 @@ POST/PATCH/DELETE stay in `src/app/api/**`. Views call them, then re-fetch via t
 
 All `/app/*` list/dashboard views: Dashboard, Tasks (nurse + manager), Staff, Surgeries, Templates, Incidents, Rota, Reports, Task history.
 
+### Reception view (desk mode)
+
+Receptionists use the same kiosk URL (`/p/{slug}/{token}`) but pick **Reception** at the first “desk” step. After PIN they go straight to `/app/tasks` (no surgery selection). Reception templates should typically have **empty `surgery_ids`** so they generate `daily_tasks` with `surgery_id = NULL`, and filtering relies on `task_templates.role_responsible = 'receptionist'` (plus “overdue” visibility) rather than surgery.
+
 ### Common mistakes to avoid
 
 - **Duplicating query logic** in an API route instead of importing the loader.

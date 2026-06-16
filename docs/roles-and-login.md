@@ -47,6 +47,17 @@ Platform admin is **not** a database role. It is your email in `PLATFORM_ADMIN_E
 
 ---
 
+## Desk filter (clinical vs reception)
+
+The kiosk login URL (`/p/{slug}/{token}`) starts with a **desk** choice:
+
+- **Clinical staff**: shows clinical staff (e.g. nurses). After PIN, nurses select a **surgery** for their shift.
+- **Reception**: shows reception staff. After PIN, receptionists go straight to **Tasks** (no surgery step).
+
+This desk choice is a UI-level filter for the staff picker (the API accepts `desk=clinical|reception`) so a shared kiosk can be used at both desks without mixing name lists.
+
+---
+
 ## How to add users
 
 ### New clinic (real pilot)
@@ -87,6 +98,7 @@ Only exist after running `supabase/seed.sql` (local: `supabase db reset`; remote
 | Manager | `/login` → `manager@demo.effinic.test` / `DemoManager1!` |
 | Sarah Nurse | `/p/demo-dental/11111111-1111-1111-1111-111111111111` → Sarah Nurse → PIN `1234` |
 | James Nurse | Same URL → James Nurse → PIN `1234` |
+| Rita Reception | Same URL → Reception (desk) → Rita Reception → PIN `1234` |
 
 Demo manager is **not** a platform admin unless that email is also in `PLATFORM_ADMIN_EMAILS`.
 

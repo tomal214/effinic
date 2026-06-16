@@ -13,6 +13,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- manager user_id:   33333333-3333-3333-3333-333333333331
 -- nurse1 user_id:    33333333-3333-3333-3333-333333333332
 -- nurse2 user_id:    33333333-3333-3333-3333-333333333333
+-- reception user_id: 33333333-3333-3333-3333-333333333334
 
 -- Precomputed bcrypt for PIN 1234 (bcryptjs cost 10):
 -- $2b$10$2ke8lvRdnuXwmuXGdzbxB.10nTKydXsjjdHF2RcUoFX9fZOobIojW
@@ -84,6 +85,23 @@ INSERT INTO auth.users (
     '{"full_name":"James Nurse"}',
     now(),
     now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '33333333-3333-3333-3333-333333333334',
+    'authenticated',
+    'authenticated',
+    'demo-dental.reception@practice.internal',
+    crypt(gen_random_uuid()::text, gen_salt('bf')),
+    now(),
+    '',
+    '',
+    '',
+    '',
+    '{"provider":"email","providers":["email"]}',
+    '{"full_name":"Rita Reception"}',
+    now(),
+    now()
   );
 
 INSERT INTO auth.identities (
@@ -125,6 +143,16 @@ INSERT INTO auth.identities (
     now(),
     now(),
     now()
+  ),
+  (
+    gen_random_uuid(),
+    '33333333-3333-3333-3333-333333333334',
+    '33333333-3333-3333-3333-333333333334',
+    '{"sub":"33333333-3333-3333-3333-333333333334","email":"demo-dental.reception@practice.internal","email_verified":true}'::jsonb,
+    'email',
+    now(),
+    now(),
+    now()
   );
 
 INSERT INTO practices (id, name, slug, practice_token, timezone, signup_mode)
@@ -140,7 +168,8 @@ VALUES (
 INSERT INTO profiles (id, full_name) VALUES
   ('33333333-3333-3333-3333-333333333331', 'Demo Manager'),
   ('33333333-3333-3333-3333-333333333332', 'Sarah Nurse'),
-  ('33333333-3333-3333-3333-333333333333', 'James Nurse');
+  ('33333333-3333-3333-3333-333333333333', 'James Nurse'),
+  ('33333333-3333-3333-3333-333333333334', 'Rita Reception');
 
 INSERT INTO surgeries (id, practice_id, name, sort_order) VALUES
   ('44444444-4444-4444-4444-444444444441', '22222222-2222-2222-2222-222222222222', 'Surgery 1', 1),
@@ -168,6 +197,13 @@ INSERT INTO practice_members (id, practice_id, user_id, role, active_surgery_id)
     '33333333-3333-3333-3333-333333333333',
     'nurse',
     '44444444-4444-4444-4444-444444444442'
+  ),
+  (
+    '66666666-6666-6666-6666-666666666664',
+    '22222222-2222-2222-2222-222222222222',
+    '33333333-3333-3333-3333-333333333334',
+    'receptionist',
+    NULL
   );
 
 INSERT INTO practice_member_pins (member_id, pin_hash) VALUES
@@ -178,11 +214,15 @@ INSERT INTO practice_member_pins (member_id, pin_hash) VALUES
   (
     '66666666-6666-6666-6666-666666666663',
     '$2b$10$2ke8lvRdnuXwmuXGdzbxB.10nTKydXsjjdHF2RcUoFX9fZOobIojW'
+  ),
+  (
+    '66666666-6666-6666-6666-666666666664',
+    '$2b$10$2ke8lvRdnuXwmuXGdzbxB.10nTKydXsjjdHF2RcUoFX9fZOobIojW'
   );
 
 INSERT INTO task_templates (
   id, practice_id, title, description, time_due, role_responsible,
-  surgery_ids, is_mandatory, priority, checklist_steps
+  surgery_ids, is_mandatory, priority, checklist_steps, category
 ) VALUES
   (
     '55555555-5555-5555-5555-555555555551',
@@ -194,7 +234,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444441', '44444444-4444-4444-4444-444444444442', '44444444-4444-4444-4444-444444444443']::uuid[],
     true,
     'high',
-    '[{"label":"Run cycle","done":false},{"label":"Log temperature","done":false}]'::jsonb
+    '[{"label":"Run cycle","done":false},{"label":"Log temperature","done":false}]'::jsonb,
+    'sterilisation'
   ),
   (
     '55555555-5555-5555-5555-555555555552',
@@ -206,7 +247,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444441']::uuid[],
     true,
     'medium',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'cleaning'
   ),
   (
     '55555555-5555-5555-5555-555555555553',
@@ -218,7 +260,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444441', '44444444-4444-4444-4444-444444444442']::uuid[],
     true,
     'high',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'equipment'
   ),
   (
     '55555555-5555-5555-5555-555555555554',
@@ -230,7 +273,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444443']::uuid[],
     true,
     'medium',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'equipment'
   ),
   (
     '55555555-5555-5555-5555-555555555555',
@@ -242,7 +286,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444441', '44444444-4444-4444-4444-444444444442', '44444444-4444-4444-4444-444444444443']::uuid[],
     true,
     'medium',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'end_of_day'
   ),
   (
     '55555555-5555-5555-5555-555555555556',
@@ -254,7 +299,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444442']::uuid[],
     false,
     'low',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'equipment'
   ),
   (
     '55555555-5555-5555-5555-555555555557',
@@ -266,7 +312,8 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444441', '44444444-4444-4444-4444-444444444442', '44444444-4444-4444-4444-444444444443']::uuid[],
     true,
     'high',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'general'
   ),
   (
     '55555555-5555-5555-5555-555555555558',
@@ -278,8 +325,181 @@ INSERT INTO task_templates (
     ARRAY['44444444-4444-4444-4444-444444444441']::uuid[],
     true,
     'medium',
-    '[]'::jsonb
+    '[]'::jsonb,
+    'general'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555561',
+    '22222222-2222-2222-2222-222222222222',
+    'Cash-up and card totals',
+    'Reconcile card machine totals and cash drawer.',
+    '17:30',
+    'receptionist',
+    '{}'::uuid[],
+    true,
+    'high',
+    '[]'::jsonb,
+    'financial'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555562',
+    '22222222-2222-2222-2222-222222222222',
+    'Refunds and adjustments log',
+    'Check today’s refunds/adjustments and record reference numbers.',
+    NULL,
+    'receptionist',
+    '{}'::uuid[],
+    false,
+    'medium',
+    '[]'::jsonb,
+    'financial'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555563',
+    '22222222-2222-2222-2222-222222222222',
+    'Secure patient paperwork',
+    'Lock away any paper forms and shred what is no longer needed.',
+    '18:00',
+    'receptionist',
+    '{}'::uuid[],
+    true,
+    'high',
+    '[]'::jsonb,
+    'confidential'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555564',
+    '22222222-2222-2222-2222-222222222222',
+    'Tomorrow appointment list',
+    'Print or verify tomorrow’s appointment list and any required notes.',
+    '18:10',
+    'receptionist',
+    '{}'::uuid[],
+    true,
+    'medium',
+    '[]'::jsonb,
+    'end_of_day'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555565',
+    '22222222-2222-2222-2222-222222222222',
+    'Inbox triage',
+    'Triage the referrals/inbox queue and flag anything urgent.',
+    NULL,
+    'receptionist',
+    '{}'::uuid[],
+    false,
+    'medium',
+    '[]'::jsonb,
+    'confidential'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555566',
+    '22222222-2222-2222-2222-222222222222',
+    'Reception close checklist',
+    'Close reception: tidy desk, clear messages, set phone to out-of-hours.',
+    '18:20',
+    'receptionist',
+    '{}'::uuid[],
+    true,
+    'medium',
+    '[]'::jsonb,
+    'end_of_day'
   );
+
+-- Seed historical daily_tasks for the last 21 days (~30% incomplete)
+WITH seed_dates AS (
+  SELECT (current_date - d)::date AS task_date
+  FROM generate_series(1, 21) AS d
+),
+active_templates AS (
+  SELECT id, practice_id, assigned_user_id, surgery_ids
+  FROM task_templates
+  WHERE practice_id = '22222222-2222-2222-2222-222222222222'::uuid
+    AND is_active = true
+),
+expanded AS (
+  SELECT
+    t.practice_id,
+    t.id AS task_template_id,
+    sd.task_date,
+    t.assigned_user_id AS assigned_to,
+    CASE
+      WHEN array_length(t.surgery_ids, 1) IS NULL OR array_length(t.surgery_ids, 1) = 0
+        THEN NULL::uuid
+      ELSE s.surgery_id
+    END AS surgery_id
+  FROM active_templates t
+  CROSS JOIN seed_dates sd
+  LEFT JOIN LATERAL unnest(t.surgery_ids) AS s(surgery_id)
+    ON array_length(t.surgery_ids, 1) IS NOT NULL AND array_length(t.surgery_ids, 1) > 0
+),
+hashed AS (
+  SELECT
+    e.*,
+    encode(
+      digest(
+        e.task_template_id::text || ':' || coalesce(e.surgery_id::text, '') || ':' || e.task_date::text,
+        'sha256'
+      ),
+      'hex'
+    ) AS h
+  FROM expanded e
+),
+final_rows AS (
+  SELECT
+    (
+      substr(h, 1, 8) || '-' ||
+      substr(h, 9, 4) || '-' ||
+      substr(h, 13, 4) || '-' ||
+      substr(h, 17, 4) || '-' ||
+      substr(h, 21, 12)
+    )::uuid AS id,
+    practice_id,
+    task_template_id,
+    surgery_id,
+    task_date,
+    assigned_to,
+    CASE
+      WHEN mod(to_number(substr(h, 1, 8), 'FMXXXXXXXX')::int, 10) < 3
+        THEN 'pending'::task_status
+      ELSE 'completed'::task_status
+    END AS status,
+    CASE
+      WHEN mod(to_number(substr(h, 1, 8), 'FMXXXXXXXX')::int, 10) < 3
+        THEN NULL
+      ELSE (task_date::timestamptz + time '16:30')
+    END AS completed_at,
+    CASE
+      WHEN mod(to_number(substr(h, 1, 8), 'FMXXXXXXXX')::int, 10) < 3
+        THEN NULL::uuid
+      ELSE '33333333-3333-3333-3333-333333333331'::uuid
+    END AS completed_by
+  FROM hashed
+)
+INSERT INTO daily_tasks (
+  id,
+  practice_id,
+  task_template_id,
+  surgery_id,
+  task_date,
+  assigned_to,
+  status,
+  completed_at,
+  completed_by
+)
+SELECT
+  id,
+  practice_id,
+  task_template_id,
+  surgery_id,
+  task_date,
+  assigned_to,
+  status,
+  completed_at,
+  completed_by
+FROM final_rows
+ON CONFLICT DO NOTHING;
 
 INSERT INTO rota_assignments (
   practice_id, user_id, surgery_id, shift_date, shift_type, is_published, assigned_by

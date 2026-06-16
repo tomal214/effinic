@@ -13,6 +13,7 @@ export const DEMO = {
   managerEmail: 'manager@demo.effinic.test',
   managerPassword: 'DemoManager1!',
   nursePin: '1234',
+  receptionistName: 'Rita Reception',
 }
 
 export async function loginAsManager(page: Page) {
@@ -33,6 +34,12 @@ export async function loginAsNurse(
   const surgeryName = options?.surgeryName ?? 'Surgery 1'
 
   await page.goto(DEMO.practiceUrl)
+  await expect(
+    page.getByRole('heading', { name: 'Where are you working?' })
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Clinical staff' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+
   await expect(page.getByRole('heading', { name: 'Who are you?' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Sarah Nurse' })).toBeVisible({
     timeout: 20_000,
@@ -55,5 +62,29 @@ export async function loginAsNurse(
   const startShift = page.getByRole('button', { name: 'Start shift' })
   await expect(startShift).toBeEnabled({ timeout: 10_000 })
   await startShift.click()
+  await expect(page).toHaveURL(/\/app\/tasks/, { timeout: 30_000 })
+}
+
+export async function loginAsReceptionist(page: Page) {
+  await page.goto(DEMO.practiceUrl)
+  await expect(
+    page.getByRole('heading', { name: 'Where are you working?' })
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Reception' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Who are you?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: DEMO.receptionistName })).toBeVisible(
+    {
+      timeout: 20_000,
+    }
+  )
+  await page.getByRole('button', { name: DEMO.receptionistName }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  for (const digit of DEMO.nursePin) {
+    await page.getByRole('button', { name: digit, exact: true }).click()
+  }
+
   await expect(page).toHaveURL(/\/app\/tasks/, { timeout: 30_000 })
 }
