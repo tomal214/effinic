@@ -21,9 +21,6 @@ export async function generateMetadata({
       capable: true,
       title: practice?.name ?? 'Effinic',
     },
-    other: {
-      'mobile-web-app-capable': 'yes',
-    },
   }
 }
 

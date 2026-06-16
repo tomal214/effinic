@@ -4,7 +4,7 @@ import { buildPracticeManifest } from '@/lib/pwa/practice-manifest'
 
 type RouteContext = { params: Promise<{ slug: string; token: string }> }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { slug, token } = await context.params
   const practice = await getPracticeBySlugToken(slug, token)
 
@@ -12,10 +12,12 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
+  const origin = new URL(request.url).origin
   const manifest = buildPracticeManifest({
     name: practice.name,
     slug,
     token,
+    origin,
   })
 
   return new NextResponse(JSON.stringify(manifest), {

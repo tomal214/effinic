@@ -1,6 +1,6 @@
-import { managerPwaMetadata } from '@/lib/pwa/manager-metadata'
+import { platformPwaMetadata } from '@/lib/pwa/platform-metadata'
 
-export const metadata = managerPwaMetadata
+export const metadata = platformPwaMetadata
 
 export default function PlatformLayout({
   children,

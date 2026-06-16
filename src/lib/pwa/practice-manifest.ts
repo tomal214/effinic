@@ -1,44 +1,38 @@
+import { withOriginIcons } from '@/lib/pwa/icons'
+
 export type PracticeManifestInput = {
   name: string
   slug: string
   token: string
+  origin?: string
+}
+
+function practiceShortName(name: string) {
+  const trimmed = name.trim()
+  if (trimmed.length <= 12) return trimmed
+  return `${trimmed.slice(0, 11).trimEnd()}…`
 }
 
 export function buildPracticeManifest({
   name,
   slug,
   token,
+  origin,
 }: PracticeManifestInput) {
-  const startUrl = `/p/${slug}/${token}`
+  const startPath = `/p/${slug}/${token}`
+  const startUrl = origin ? `${origin}${startPath}` : startPath
+  const scope = origin ? `${origin}/` : '/'
 
   return {
     name: `${name} · Effinic`,
-    short_name: name,
+    short_name: practiceShortName(name),
     id: startUrl,
     start_url: startUrl,
-    scope: '/',
+    scope,
     display: 'standalone',
+    prefer_related_applications: false,
     theme_color: '#0d9488',
     background_color: '#f8f7f4',
-    icons: [
-      {
-        src: '/brand/icon-192.png',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/brand/icon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/brand/icon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable',
-      },
-    ],
+    icons: withOriginIcons(origin),
   }
 }
