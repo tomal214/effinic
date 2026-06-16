@@ -225,28 +225,30 @@ function MobileMoreSheet({
   const [open, setOpen] = useState(false)
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <>
       <MobileMoreTab active={active} onOpen={() => setOpen(true)} />
-      <SheetContent
-        side="bottom"
-        showCloseButton
-        className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))]"
-      >
-        <SheetHeader className="text-left">
-          <SheetTitle>More</SheetTitle>
-        </SheetHeader>
-        <nav className="flex flex-col gap-1 px-1">
-          {items.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              pathname={pathname}
-              variant="sheet"
-              onNavigate={() => setOpen(false)}
-            />
-          ))}
-        </nav>
-      </SheetContent>
-    </Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="bottom"
+          showCloseButton
+          className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle>More</SheetTitle>
+          </SheetHeader>
+          <nav className="flex flex-col gap-1 px-1">
+            {items.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                variant="sheet"
+                onNavigate={() => setOpen(false)}
+              />
+            ))}
+          </nav>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }

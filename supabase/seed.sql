@@ -407,10 +407,10 @@ INSERT INTO task_templates (
     'end_of_day'
   );
 
--- Seed historical daily_tasks for the last 21 days (~30% incomplete)
+-- Seed historical daily_tasks for the last 56 days (~30% incomplete)
 WITH seed_dates AS (
   SELECT (current_date - d)::date AS task_date
-  FROM generate_series(1, 21) AS d
+  FROM generate_series(1, 56) AS d
 ),
 active_templates AS (
   SELECT id, practice_id, assigned_user_id, surgery_ids
@@ -501,6 +501,15 @@ SELECT
 FROM final_rows
 ON CONFLICT DO NOTHING;
 
+-- Attach demo photo evidence to a subset of completed historical tasks
+UPDATE daily_tasks
+SET photo_paths = jsonb_build_array(
+  '22222222-2222-2222-2222-222222222222/tasks/' || id::text || '/demo-evidence.jpg'
+)
+WHERE practice_id = '22222222-2222-2222-2222-222222222222'::uuid
+  AND status = 'completed'
+  AND mod(abs(hashtext(id::text)), 5) = 0;
+
 INSERT INTO rota_assignments (
   practice_id, user_id, surgery_id, shift_date, shift_type, is_published, assigned_by
 )
@@ -526,7 +535,7 @@ FROM generate_series(0, 6) AS d;
 
 INSERT INTO incidents (
   id, practice_id, title, type, severity, description,
-  surgery_id, reported_by, status
+  surgery_id, reported_by, status, created_at
 ) VALUES
   (
     '77777777-7777-7777-7777-777777777771',
@@ -537,7 +546,8 @@ INSERT INTO incidents (
     'Wet floor spotted and mopped before patient arrival.',
     '44444444-4444-4444-4444-444444444441',
     '33333333-3333-3333-3333-333333333332',
-    'resolved'
+    'resolved',
+    (current_date - 3)::timestamptz + time '10:15'
   ),
   (
     '77777777-7777-7777-7777-777777777772',
@@ -548,7 +558,56 @@ INSERT INTO incidents (
     'Brief temperature dip during cycle; manufacturer contacted.',
     '44444444-4444-4444-4444-444444444443',
     '33333333-3333-3333-3333-333333333333',
-    'under_review'
+    'under_review',
+    (current_date - 10)::timestamptz + time '14:40'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777773',
+    '22222222-2222-2222-2222-222222222222',
+    'Patient data left on reception desk',
+    'confidentiality',
+    'medium',
+    'Paper notes removed and staff reminded of clear-desk policy.',
+    NULL,
+    '33333333-3333-3333-3333-333333333334',
+    'resolved',
+    (current_date - 17)::timestamptz + time '16:05'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777774',
+    '22222222-2222-2222-2222-222222222222',
+    'Fire exit partially blocked',
+    'safety',
+    'high',
+    'Delivery boxes moved; exit rechecked and signed off.',
+    '44444444-4444-4444-4444-444444444442',
+    '33333333-3333-3333-3333-333333333332',
+    'resolved',
+    (current_date - 24)::timestamptz + time '09:30'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777775',
+    '22222222-2222-2222-2222-222222222222',
+    'Card terminal reconciliation mismatch',
+    'financial',
+    'low',
+    '£12 variance found and corrected during cash-up.',
+    NULL,
+    '33333333-3333-3333-3333-333333333334',
+    'resolved',
+    (current_date - 31)::timestamptz + time '18:10'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777776',
+    '22222222-2222-2222-2222-222222222222',
+    'Sharps bin nearly full',
+    'safety',
+    'medium',
+    'Bin replaced before afternoon list.',
+    '44444444-4444-4444-4444-444444444441',
+    '33333333-3333-3333-3333-333333333333',
+    'resolved',
+    (current_date - 42)::timestamptz + time '11:20'
   );
 
 INSERT INTO settings (practice_id, key, value) VALUES

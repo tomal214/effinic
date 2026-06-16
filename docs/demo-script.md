@@ -38,8 +38,10 @@ Use the seeded demo practice after `supabase db reset`.
 3. Highlight session warning banner when within 30 minutes of lock (13:15 / 18:00)
 4. Review per-surgery and per-nurse breakdown tables
 
-## 5. Reports + export (30s)
+## 5. Reports + export (1 min)
 
 1. Open **Reports** → 8-week completion + incidents chart
-2. Select a week → **Export CSV**
-3. Optional: **History** → date filter → export audit CSV
+2. Select a week → review summary cards (completion, mandatory missed, incidents, photos)
+3. Switch tabs: **By surgery** / **By nurse** / **By category**
+4. **Export tasks CSV** and **Export incidents CSV**
+5. Optional: **History** → date filter → export audit CSV

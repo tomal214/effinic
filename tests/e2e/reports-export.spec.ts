@@ -15,8 +15,16 @@ test.describe('reports export', () => {
     await page.goto('/app/reports')
     await weeklyResponse
 
-    await expect(page.getByRole('button', { name: /export csv/i })).toBeEnabled({
+    await expect(
+      page.getByRole('button', { name: /export tasks csv/i })
+    ).toBeEnabled({
       timeout: 20_000,
     })
+    await expect(
+      page.getByRole('button', { name: /export incidents csv/i })
+    ).toBeEnabled({
+      timeout: 20_000,
+    })
+    await expect(page.getByText('Completion')).toBeVisible()
   })
 })

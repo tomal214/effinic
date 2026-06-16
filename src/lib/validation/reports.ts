@@ -6,3 +6,7 @@ export const reportsExportQuerySchema = z.object({
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
   surgeryId: uuidSchema.optional(),
 })
+
+export const reportsWeekQuerySchema = z.object({
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+})

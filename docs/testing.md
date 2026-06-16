@@ -53,7 +53,7 @@ Local setup: `supabase db reset` then `pnpm dev` → **http://localhost:3000**
 
 ## What to test (by flow)
 
-**Manager** — dashboard stats, staff edit, template create/edit (category, priority, evidence), rota publish, reports CSV export.
+**Manager** — dashboard stats, staff edit, template create/edit (category, priority, evidence), rota publish, reports (week summary + breakdown tabs + tasks/incidents CSV export).
 
 **Nurse** — progress bar, category chips, complete task with checklist/photo, morning sign-off, surgery switcher.
 

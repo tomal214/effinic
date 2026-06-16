@@ -31,7 +31,8 @@ export default function PwaBootSplash() {
     if (!splash) return
 
     if (!isStandalonePwa()) {
-      splash.remove()
+      splash.style.display = 'none'
+      splash.setAttribute('aria-hidden', 'true')
       return
     }
 
@@ -43,7 +44,10 @@ export default function PwaBootSplash() {
       if (cancelled) return
       splashEl.style.opacity = '0'
       splashEl.style.pointerEvents = 'none'
-      window.setTimeout(() => splashEl.remove(), FADE_MS)
+      window.setTimeout(() => {
+        splashEl.style.display = 'none'
+        splashEl.setAttribute('aria-hidden', 'true')
+      }, FADE_MS)
     }
 
     function tryDismiss() {
