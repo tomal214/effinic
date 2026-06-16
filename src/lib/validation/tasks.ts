@@ -20,6 +20,8 @@ export const taskHistoryQuerySchema = z.object({
 })
 
 export const uploadSignSchema = z.object({
+  action: z.enum(['upload', 'read']).default('upload'),
   taskId: uuidSchema,
   contentType: z.literal('image/jpeg').default('image/jpeg'),
+  paths: z.array(z.string().trim().min(1)).optional(),
 })

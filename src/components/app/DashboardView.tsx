@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -16,6 +17,7 @@ import {
 import type {
   DashboardData,
   NurseBreakdown,
+  RecentActivityItem,
   SessionWarning,
   SurgeryBreakdown,
 } from '@/lib/services/dashboard'
@@ -25,16 +27,18 @@ function StatCard({
   label,
   value,
   tone,
+  href,
 }: {
   label: string
   value: number
   tone?: 'warning' | 'danger'
+  href?: string
 }) {
-  return (
-    <div className="rounded-xl border border-border bg-background p-5">
+  const Card = (
+    <div className="rounded-xl border border-border bg-surface p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p
-        className={`mt-2 text-3xl font-semibold ${
+        className={`mt-2 text-2xl font-semibold ${
           tone === 'danger'
             ? 'text-destructive'
             : tone === 'warning'
@@ -45,6 +49,16 @@ function StatCard({
         {value}
       </p>
     </div>
+  )
+
+  if (!href) return Card
+
+  return (
+    <Link href={href} className="block focus:outline-none">
+      <div className="rounded-xl ring-offset-background transition hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring">
+        {Card}
+      </div>
+    </Link>
   )
 }
 
@@ -74,6 +88,46 @@ function SessionWarnings({ warnings }: { warnings: SessionWarning[] }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function RecentActivity({ items }: { items: RecentActivityItem[] }) {
+  if (!items.length) return null
+
+  return (
+    <div className="rounded-xl border border-border bg-surface">
+      <div className="border-b border-border px-5 py-4">
+        <h2 className="font-semibold">Recent activity</h2>
+      </div>
+      <div className="divide-y divide-border">
+        {items.map((item) => (
+          <div key={item.kind === 'incident' ? item.incidentId : item.taskId} className="flex items-start justify-between gap-4 px-5 py-3 text-sm">
+            <div className="min-w-0">
+              <p className="truncate font-medium">
+                {item.kind === 'incident' ? item.title : item.title}
+              </p>
+              <p className="mt-0.5 truncate text-muted-foreground">
+                {item.kind === 'task_completed' ? (
+                  <>
+                    Task completed
+                    {item.actorName ? ` · ${item.actorName}` : ''}
+                    {item.surgeryName ? ` · ${item.surgeryName}` : ''}
+                  </>
+                ) : (
+                  <>
+                    Incident · {item.severity}
+                    {item.surgeryName ? ` · ${item.surgeryName}` : ''}
+                  </>
+                )}
+              </p>
+            </div>
+            <p className="shrink-0 text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(item.occurredAt), { addSuffix: true })}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -163,6 +217,25 @@ export default function DashboardView({
   const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState('')
 
+  const stats = useMemo(() => {
+    if (!dashboard) return []
+    return [
+      {
+        label: 'Incomplete today',
+        value: dashboard.incompleteCount,
+        href: '/app/tasks?status=incomplete',
+      },
+      {
+        label: 'Overdue today',
+        value: dashboard.overdueCount,
+        tone: dashboard.overdueCount > 0 ? ('danger' as const) : undefined,
+        href: '/app/tasks?status=overdue',
+      },
+      { label: 'Completed today', value: dashboard.completedToday },
+      { label: 'Active staff', value: dashboard.staffActiveCount },
+    ]
+  }, [dashboard])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -236,14 +309,19 @@ export default function DashboardView({
 
       <SessionWarnings warnings={dashboard.sessionWarnings} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard label="Incomplete today" value={dashboard.incompleteCount} />
-        <StatCard
-          label="Overdue today"
-          value={dashboard.overdueCount}
-          tone={dashboard.overdueCount > 0 ? 'danger' : undefined}
-        />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            tone={stat.tone}
+            href={stat.href}
+          />
+        ))}
       </div>
+
+      <RecentActivity items={dashboard.recentActivity} />
 
       <BreakdownTable
         title="By surgery"

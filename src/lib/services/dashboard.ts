@@ -52,13 +52,34 @@ export type NurseBreakdown = {
   overdue: number
 }
 
+export type RecentActivityItem =
+  | {
+      kind: 'task_completed'
+      taskId: string
+      title: string
+      surgeryName: string | null
+      actorName: string | null
+      occurredAt: string
+    }
+  | {
+      kind: 'incident'
+      incidentId: string
+      title: string
+      severity: string
+      surgeryName: string | null
+      occurredAt: string
+    }
+
 export type DashboardData = {
   taskDate: string
   incompleteCount: number
   overdueCount: number
+  completedToday: number
+  staffActiveCount: number
   sessionWarnings: SessionWarning[]
   bySurgery: SurgeryBreakdown[]
   byNurse: NurseBreakdown[]
+  recentActivity: RecentActivityItem[]
 }
 
 function getMinutesUntilLock(
@@ -76,6 +97,119 @@ function getMinutesUntilLock(
   return (lockAt.getTime() - zonedNow.getTime()) / 60_000
 }
 
+export async function loadRecentActivity(
+  admin: AdminClient,
+  member: CurrentMember,
+  limit = 10
+): Promise<RecentActivityItem[]> {
+  const [taskResult, incidentResult] = await Promise.all([
+    admin
+      .from('daily_tasks')
+      .select(
+        `
+        id,
+        completed_at,
+        completed_by,
+        task_templates ( title ),
+        surgeries ( name )
+      `
+      )
+      .eq('practice_id', member.practiceId)
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(limit),
+    admin
+      .from('incidents')
+      .select('id, title, severity, surgery_id, created_at')
+      .eq('practice_id', member.practiceId)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ])
+
+  if (taskResult.error) throw taskResult.error
+  if (incidentResult.error) throw incidentResult.error
+
+  type TaskRow = {
+    id: string
+    completed_at: string | null
+    completed_by: string | null
+    task_templates: { title: string } | null
+    surgeries: { name: string } | null
+  }
+
+  const taskRows = (taskResult.data ?? []) as TaskRow[]
+  const incidentRows = (incidentResult.data ?? []) as {
+    id: string
+    title: string
+    severity: string
+    surgery_id: string | null
+    created_at: string
+  }[]
+
+  const completerIds = [
+    ...new Set(
+      taskRows
+        .map((t) => t.completed_by)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ]
+
+  const nameMap = new Map<string, string>()
+  if (completerIds.length) {
+    const { data: profiles, error } = await admin
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', completerIds)
+    if (error) throw error
+    for (const profile of profiles ?? []) {
+      nameMap.set(profile.id, profile.full_name)
+    }
+  }
+
+  const surgeryIds = [
+    ...new Set(
+      incidentRows
+        .map((i) => i.surgery_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ]
+  const surgeryMap = new Map<string, string>()
+  if (surgeryIds.length) {
+    const { data: surgeries, error } = await admin
+      .from('surgeries')
+      .select('id, name')
+      .in('id', surgeryIds)
+    if (error) throw error
+    for (const surgery of surgeries ?? []) {
+      surgeryMap.set(surgery.id, surgery.name)
+    }
+  }
+
+  const tasks: RecentActivityItem[] = taskRows
+    .filter((row) => row.completed_at)
+    .map((row) => ({
+      kind: 'task_completed',
+      taskId: row.id,
+      title: row.task_templates?.title ?? 'Task',
+      surgeryName: row.surgeries?.name ?? null,
+      actorName: row.completed_by ? (nameMap.get(row.completed_by) ?? null) : null,
+      occurredAt: row.completed_at as string,
+    }))
+
+  const incidents: RecentActivityItem[] = incidentRows.map((row) => ({
+    kind: 'incident',
+    incidentId: row.id,
+    title: row.title,
+    severity: row.severity,
+    surgeryName: row.surgery_id ? (surgeryMap.get(row.surgery_id) ?? null) : null,
+    occurredAt: row.created_at,
+  }))
+
+  return [...tasks, ...incidents]
+    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+    .slice(0, limit)
+}
+
 export async function getDashboardData(
   admin: AdminClient,
   member: CurrentMember,
@@ -84,19 +218,36 @@ export async function getDashboardData(
   const today = await ensureTodayTasks(admin, member.practiceId, timezone)
   const now = getNow()
 
-  const { data: rows, error } = await admin
-    .from('daily_tasks')
-    .select(
-      `
-      id, status, assigned_to, surgery_id, task_date,
-      task_templates ( time_due, is_mandatory, assigned_user_id ),
-      surgeries ( name )
-    `
-    )
-    .eq('practice_id', member.practiceId)
-    .eq('task_date', today)
+  const [{ data: rows, error }, completedResult, staffResult, recentActivity] =
+    await Promise.all([
+      admin
+        .from('daily_tasks')
+        .select(
+          `
+          id, status, assigned_to, surgery_id, task_date,
+          task_templates ( time_due, is_mandatory, assigned_user_id ),
+          surgeries ( name )
+        `
+        )
+        .eq('practice_id', member.practiceId)
+        .eq('task_date', today),
+      admin
+        .from('daily_tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('practice_id', member.practiceId)
+        .eq('task_date', today)
+        .eq('status', 'completed'),
+      admin
+        .from('practice_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('practice_id', member.practiceId)
+        .eq('is_active', true),
+      loadRecentActivity(admin, member, 10),
+    ])
 
   if (error) throw error
+  if (completedResult.error) throw completedResult.error
+  if (staffResult.error) throw staffResult.error
 
   const tasks = (rows ?? []) as RawDashboardTask[]
 
@@ -199,11 +350,14 @@ export async function getDashboardData(
     taskDate: today,
     incompleteCount,
     overdueCount,
+    completedToday: completedResult.count ?? 0,
+    staffActiveCount: staffResult.count ?? 0,
     sessionWarnings,
     bySurgery: [...surgeryMap.values()].sort((a, b) =>
       a.surgeryName.localeCompare(b.surgeryName)
     ),
     byNurse: byNurse.sort((a, b) => a.name.localeCompare(b.name)),
+    recentActivity,
   }
 }
 

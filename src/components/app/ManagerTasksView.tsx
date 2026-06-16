@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import TaskRow from '@/components/app/TaskRow'
 import TaskCompleteDialog from '@/components/app/TaskCompleteDialog'
 import SessionBanner from '@/components/app/SessionBanner'
@@ -17,6 +18,7 @@ import { runDeferredEffect } from '@/lib/react/defer-effect'
 import type { EnrichedTask } from '@/lib/services/tasks'
 
 type Surgery = { id: string; name: string }
+type StatusFilter = 'all' | 'incomplete' | 'overdue' | 'completed'
 
 export default function ManagerTasksView({
   readOnly,
@@ -49,6 +51,8 @@ export default function ManagerTasksView({
     )
   })
   const [surgeryFilter, setSurgeryFilter] = useState('all')
+  const searchParams = useSearchParams()
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [loading, setLoading] = useState(!initialData)
@@ -91,10 +95,31 @@ export default function ManagerTasksView({
     runDeferredEffect(() => loadTasks())
   }, [loadTasks, initialData])
 
+  useEffect(() => {
+    const status = searchParams.get('status')
+    if (status === 'incomplete' || status === 'overdue' || status === 'completed') {
+      setStatusFilter(status)
+      return
+    }
+    setStatusFilter('all')
+  }, [searchParams])
+
   const filteredTasks = useMemo(() => {
-    if (surgeryFilter === 'all') return tasks
-    return tasks.filter((t) => t.surgeryId === surgeryFilter)
-  }, [tasks, surgeryFilter])
+    let result = tasks
+    if (surgeryFilter !== 'all') {
+      result = result.filter((t) => t.surgeryId === surgeryFilter)
+    }
+    if (statusFilter === 'overdue') {
+      result = result.filter((t) => t.computedStatus === 'overdue')
+    } else if (statusFilter === 'completed') {
+      result = result.filter((t) => t.computedStatus === 'completed')
+    } else if (statusFilter === 'incomplete') {
+      result = result.filter(
+        (t) => t.computedStatus !== 'completed' && t.computedStatus !== 'overdue'
+      )
+    }
+    return result
+  }, [tasks, surgeryFilter, statusFilter])
 
   const session = useMemo(() => {
     const morningTasks = filteredTasks.filter((t) => t.session === 'morning')
@@ -111,7 +136,6 @@ export default function ManagerTasksView({
   const pendingTasks = filteredTasks.filter((t) => t.computedStatus !== 'completed')
 
   function handleSelectTask(task: EnrichedTask) {
-    if (readOnly) return
     if (task.status === 'completed' && task.isLocked) return
 
     setSelectedTask(task)
@@ -126,23 +150,43 @@ export default function ManagerTasksView({
           <p className="text-sm text-muted-foreground">
             {pendingTasks.length} remaining
             {surgeryFilter !== 'all' && ` · filtered`}
+            {statusFilter !== 'all' && ` · ${statusFilter}`}
           </p>
         </div>
-        {surgeries.length > 0 && (
-          <Select value={surgeryFilter} onValueChange={(v) => v && setSurgeryFilter(v)}>
+        <div className="flex items-center gap-2">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => v && setStatusFilter(v as StatusFilter)}
+          >
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="All surgeries" />
+              <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All surgeries</SelectItem>
-              {surgeries.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="incomplete">Incomplete</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
-        )}
+          {surgeries.length > 0 && (
+            <Select
+              value={surgeryFilter}
+              onValueChange={(v) => v && setSurgeryFilter(v)}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="All surgeries" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All surgeries</SelectItem>
+                {surgeries.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       <div className="mb-4 space-y-3">
@@ -177,13 +221,16 @@ export default function ManagerTasksView({
       </div>
 
       {!readOnly && (
-        <TaskCompleteDialog
-          task={selectedTask}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onCompleted={loadTasks}
-        />
+        null
       )}
+
+      <TaskCompleteDialog
+        task={selectedTask}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCompleted={loadTasks}
+        readOnly={readOnly}
+      />
     </div>
   )
 }

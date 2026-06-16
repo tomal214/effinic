@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -19,26 +19,68 @@ import {
   formatTimeForInput,
   getTaskDialogMode,
 } from '@/lib/tasks/task-dialog-mode'
+import { evidenceSatisfied } from '@/lib/tasks/evidence'
 
 function TaskCompleteForm({
   task,
+  forceReadOnly,
   onClose,
   onCompleted,
 }: {
   task: EnrichedTask
+  forceReadOnly?: boolean
   onClose: () => void
   onCompleted: () => void
 }) {
   const mode = getTaskDialogMode(task)
-  const readOnly = mode === 'view'
+  const readOnly = forceReadOnly || mode === 'view'
   const [checklist, setChecklist] = useState(task.checklistProgress ?? {})
   const [startTime, setStartTime] = useState(formatTimeForInput(task.startTime))
   const [endTime, setEndTime] = useState(formatTimeForInput(task.endTime))
   const [materials, setMaterials] = useState(task.materialsUsed ?? '')
   const [notes, setNotes] = useState(task.notes ?? '')
   const [photos, setPhotos] = useState<File[]>([])
+  const [photoPaths, setPhotoPaths] = useState<string[]>(task.photoPaths ?? [])
+  const [signedPhotoUrls, setSignedPhotoUrls] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const checklistComplete = useMemo(() => {
+    if (!task.checklistSteps.length) return true
+    return task.checklistSteps.every((step) => checklist[step] === true)
+  }, [task.checklistSteps, checklist])
+
+  const evidenceOk = useMemo(() => {
+    return evidenceSatisfied(task.evidenceRequired, {
+      checklistComplete,
+      photoCount: photoPaths.length,
+    })
+  }, [task.evidenceRequired, checklistComplete, photoPaths.length])
+
+  useEffect(() => {
+    if (mode !== 'view' || photoPaths.length === 0) return
+
+    async function loadSignedUrls() {
+      try {
+        const res = await fetch('/api/uploads/sign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'read',
+            taskId: task.id,
+            paths: photoPaths,
+          }),
+        })
+        if (!res.ok) return
+        const body = await res.json()
+        setSignedPhotoUrls(body.data?.signedUrls ?? {})
+      } catch (err) {
+        console.error('Failed to sign read URLs:', err)
+      }
+    }
+
+    loadSignedUrls()
+  }, [mode, task.id, photoPaths])
 
   function toggleStep(step: string, checked: boolean) {
     setChecklist((prev) => ({ ...prev, [step]: checked }))
@@ -55,6 +97,12 @@ function TaskCompleteForm({
 
     setSubmitting(true)
     setError('')
+
+    if (!evidenceOk) {
+      setSubmitting(false)
+      setError('Evidence required before completing this task.')
+      return
+    }
 
     const payload = {
       checklistProgress: checklist,
@@ -211,8 +259,44 @@ function TaskCompleteForm({
         ) : null}
 
         {photos.length > 0 && (
-          <PhotoUploadQueue taskId={task.id} files={photos} />
+          <PhotoUploadQueue
+            taskId={task.id}
+            files={photos}
+            onComplete={(path) => setPhotoPaths((prev) => [...prev, path])}
+          />
         )}
+
+        {readOnly && photoPaths.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Photos</p>
+            <div className="grid grid-cols-3 gap-2">
+              {photoPaths.map((path) => (
+                <a
+                  key={path}
+                  href={signedPhotoUrls[path] ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                  aria-disabled={!signedPhotoUrls[path]}
+                >
+                  {signedPhotoUrls[path] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={signedPhotoUrls[path]}
+                      alt="Task evidence"
+                      className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                      Loading…
+                    </div>
+                  )}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {error && (
           <p className="text-sm text-danger" role="alert">
@@ -250,11 +334,13 @@ export default function TaskCompleteDialog({
   open,
   onOpenChange,
   onCompleted,
+  readOnly,
 }: {
   task: EnrichedTask | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onCompleted: () => void
+  readOnly?: boolean
 }) {
   if (!task) return null
 
@@ -265,6 +351,7 @@ export default function TaskCompleteDialog({
           <TaskCompleteForm
             key={task.id}
             task={task}
+            forceReadOnly={readOnly}
             onClose={() => onOpenChange(false)}
             onCompleted={onCompleted}
           />
