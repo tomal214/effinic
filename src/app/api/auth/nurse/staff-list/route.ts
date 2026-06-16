@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPracticeBySlugToken } from '@/lib/auth/practice'
+import { filterStaffByDesk } from '@/lib/auth/kiosk-desk'
 import { jsonError, jsonOk } from '@/lib/api/response'
 import { staffListSchema } from '@/lib/validation/auth'
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
     const { data: members } = await admin
       .from('practice_members')
-      .select('id, user_id, practice_member_pins!inner(member_id)')
+      .select('id, user_id, role, practice_member_pins!inner(member_id)')
       .eq('practice_id', practice.id)
       .eq('is_active', true)
 
@@ -39,9 +40,12 @@ export async function POST(request: Request) {
       members?.map((member) => ({
         id: member.id,
         fullName: profileMap.get(member.user_id) ?? 'Staff member',
+        role: member.role,
       })) ?? []
 
-    return jsonOk(staff)
+    const filtered = filterStaffByDesk(staff, parsed.data.desk)
+
+    return jsonOk(filtered)
   } catch (error) {
     console.error('Staff list failed:', error)
     return jsonError('Something went wrong', 500)

@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const { data: member } = await admin
       .from('practice_members')
       .select(
-        'id, user_id, is_active, practice_member_pins ( pin_hash, pin_failed_attempts, pin_locked_until )'
+        'id, user_id, role, is_active, practice_member_pins ( pin_hash, pin_failed_attempts, pin_locked_until )'
       )
       .eq('id', memberId)
       .eq('practice_id', practice.id)
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     await supabase.auth.signOut()
     await createSessionForUser(supabase, member.user_id)
 
-    return jsonOk({ ok: true })
+    return jsonOk({ ok: true, role: member.role })
   } catch (error) {
     console.error('PIN verify failed:', error)
     return jsonError('Something went wrong', 500)

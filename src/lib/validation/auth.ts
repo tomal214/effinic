@@ -13,7 +13,9 @@ export const practiceUrlSchema = z.object({
   token: uuidShape,
 })
 
-export const staffListSchema = practiceUrlSchema
+export const staffListSchema = practiceUrlSchema.extend({
+  desk: z.enum(['clinical', 'reception']).optional(),
+})
 
 export const nurseVerifySchema = practiceUrlSchema.extend({
   memberId: uuidShape,

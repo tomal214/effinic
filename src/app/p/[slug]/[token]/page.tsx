@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import Logo from '@/components/app/Logo'
 import PinPad from '@/components/app/PinPad'
 import StaffPicker, { type StaffMember } from '@/components/app/StaffPicker'
+import KioskDeskPicker from '@/components/kiosk/KioskDeskPicker'
 import { Button } from '@/components/ui/button'
 import FetchErrorPanel from '@/components/app/FetchErrorPanel'
 import { runDeferredEffect } from '@/lib/react/defer-effect'
+import type { KioskDesk } from '@/lib/auth/kiosk-desk'
 
-type Step = 'staff' | 'pin' | 'surgery'
+type Step = 'desk' | 'staff' | 'pin' | 'surgery'
 
 type Surgery = {
   id: string
@@ -24,10 +26,11 @@ export default function NurseLoginPage({
 }) {
   const { slug, token } = use(params)
   const router = useRouter()
-  const [step, setStep] = useState<Step>('staff')
+  const [step, setStep] = useState<Step>('desk')
+  const [desk, setDesk] = useState<KioskDesk | null>(null)
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [selected, setSelected] = useState<StaffMember | null>(null)
-  const [loadingStaff, setLoadingStaff] = useState(true)
+  const [loadingStaff, setLoadingStaff] = useState(false)
   const [staffFetchError, setStaffFetchError] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
@@ -38,13 +41,14 @@ export default function NurseLoginPage({
   const [switching, setSwitching] = useState(false)
 
   const loadStaff = useCallback(async () => {
+    if (!desk) return
     setLoadingStaff(true)
     setStaffFetchError('')
     try {
       const res = await fetch('/api/auth/nurse/staff-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, token }),
+        body: JSON.stringify({ slug, token, desk }),
       })
       if (!res.ok) {
         setStaff([])
@@ -59,11 +63,12 @@ export default function NurseLoginPage({
     } finally {
       setLoadingStaff(false)
     }
-  }, [slug, token])
+  }, [slug, token, desk])
 
   useEffect(() => {
+    if (step !== 'staff' || !desk) return
     runDeferredEffect(() => loadStaff())
-  }, [loadStaff])
+  }, [step, desk, loadStaff])
 
   const loadSurgeries = useCallback(async () => {
     setLoadingSurgeries(true)
@@ -79,6 +84,14 @@ export default function NurseLoginPage({
       setLoadingSurgeries(false)
     }
   }, [])
+
+  const handleDeskContinue = () => {
+    if (!desk) return
+    setSelected(null)
+    setStaff([])
+    setStaffFetchError('')
+    setStep('staff')
+  }
 
   const handleStaffContinue = () => {
     if (!selected) return
@@ -106,6 +119,13 @@ export default function NurseLoginPage({
         setPinError(json.error ?? 'Incorrect PIN')
         return
       }
+
+      const role = json.data?.role
+      if (role === 'receptionist') {
+        router.push('/app/tasks')
+        return
+      }
+
       setStep('surgery')
       await loadSurgeries()
     } catch {
@@ -133,6 +153,7 @@ export default function NurseLoginPage({
   }
 
   const stepTitle = {
+    desk: 'Where are you working?',
     staff: 'Who are you?',
     pin: `Hi ${selected?.fullName?.split(' ')[0] ?? ''}`.trim(),
     surgery: 'Select your surgery',
@@ -147,10 +168,29 @@ export default function NurseLoginPage({
           {stepTitle[step]}
         </h1>
         <p className="mb-8 text-sm text-muted-foreground">
+          {step === 'desk' && 'Choose your desk to sign in.'}
           {step === 'staff' && 'Tap your name to sign in.'}
           {step === 'pin' && 'Enter your 4-digit PIN.'}
           {step === 'surgery' && 'Choose where you are working today.'}
         </p>
+
+        {step === 'desk' && (
+          <>
+            <KioskDeskPicker
+              selected={desk}
+              onSelect={setDesk}
+            />
+            <div className="mt-auto pt-8">
+              <Button
+                className="h-12 w-full text-base"
+                disabled={!desk}
+                onClick={handleDeskContinue}
+              >
+                Continue
+              </Button>
+            </div>
+          </>
+        )}
 
         {step === 'staff' && (
           <>
@@ -163,13 +203,22 @@ export default function NurseLoginPage({
               onSelect={setSelected}
               loading={loadingStaff}
             />
-            <div className="mt-auto pt-8">
+            <div className="mt-auto flex flex-col gap-3 pt-8">
               <Button
                 className="h-12 w-full text-base"
                 disabled={!selected}
                 onClick={handleStaffContinue}
               >
                 Continue
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setStep('desk')
+                  setSelected(null)
+                }}
+              >
+                Back
               </Button>
             </div>
           </>
