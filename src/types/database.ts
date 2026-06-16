@@ -454,6 +454,7 @@ export type Database = {
       task_templates: {
         Row: {
           assigned_user_id: string | null
+          category: string | null
           checklist_steps: Json
           compliance_file_url: string | null
           created_at: string
@@ -471,6 +472,7 @@ export type Database = {
         }
         Insert: {
           assigned_user_id?: string | null
+          category?: string | null
           checklist_steps?: Json
           compliance_file_url?: string | null
           created_at?: string
@@ -488,6 +490,7 @@ export type Database = {
         }
         Update: {
           assigned_user_id?: string | null
+          category?: string | null
           checklist_steps?: Json
           compliance_file_url?: string | null
           created_at?: string

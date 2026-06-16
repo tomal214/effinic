@@ -5,6 +5,7 @@ import type { CurrentMember } from '@/lib/auth/member'
 import { getNow } from '@/lib/clock'
 import { getComputedStatus } from '@/lib/tasks/computed-status'
 import { userCanActOnTask } from '@/lib/tasks/can-access-task'
+import { parseEvidenceRequired, type EvidenceKind } from '@/lib/tasks/evidence'
 import { filterTasksForUser } from '@/lib/tasks/filter-tasks'
 import { generateDailyTasksFromTemplates } from '@/lib/tasks/generate-daily'
 import { getTaskSession } from '@/lib/session/task-session'
@@ -18,6 +19,9 @@ import type { amendTaskSchema, completeTaskSchema } from '@/lib/validation/tasks
 import type { z } from 'zod'
 
 type AdminClient = SupabaseClient<Database>
+
+const TASK_TEMPLATE_SELECT =
+  'title, description, time_due, role_responsible, priority, category, is_mandatory, checklist_steps, evidence_required, assigned_user_id, compliance_file_url'
 
 type RawTaskRow = {
   id: string
@@ -37,10 +41,14 @@ type RawTaskRow = {
   photo_paths: unknown
   task_templates: {
     title: string
+    description: string | null
     time_due: string | null
     role_responsible: string
+    priority: string
+    category: string | null
     is_mandatory: boolean
     checklist_steps: unknown
+    evidence_required: string | null
     assigned_user_id: string | null
     compliance_file_url: string | null
   } | null
@@ -54,10 +62,14 @@ export type EnrichedTask = {
   surgeryName: string | null
   taskDate: string
   title: string
+  description: string | null
   timeDue: string | null
   roleResponsible: string
+  priority: string
+  category: string | null
   isMandatory: boolean
   checklistSteps: string[]
+  evidenceRequired: EvidenceKind[]
   assignedUserId: string | null
   status: string
   computedStatus: string
@@ -117,10 +129,14 @@ function enrichTask(
     surgeryName: row.surgeries?.name ?? null,
     taskDate: row.task_date,
     title: template?.title ?? 'Task',
+    description: template?.description ?? null,
     timeDue,
     roleResponsible: template?.role_responsible ?? 'nurse',
+    priority: template?.priority ?? 'medium',
+    category: template?.category ?? null,
     isMandatory: template?.is_mandatory ?? false,
     checklistSteps: parseChecklistSteps(template?.checklist_steps),
+    evidenceRequired: parseEvidenceRequired(template?.evidence_required),
     assignedUserId: template?.assigned_user_id ?? row.assigned_to,
     status: row.status,
     computedStatus,
@@ -186,7 +202,7 @@ export async function getTodayTasksForMember(
       id, practice_id, task_template_id, surgery_id, task_date,
       assigned_to, status, completed_at, completed_by,
       checklist_progress, start_time, end_time, materials_used, notes, photo_paths,
-      task_templates ( title, time_due, role_responsible, is_mandatory, checklist_steps, assigned_user_id, compliance_file_url ),
+      task_templates ( ${TASK_TEMPLATE_SELECT} ),
       surgeries ( name )
     `
     )
@@ -232,7 +248,7 @@ export async function getTaskForMember(
       id, practice_id, task_template_id, surgery_id, task_date,
       assigned_to, status, completed_at, completed_by,
       checklist_progress, start_time, end_time, materials_used, notes, photo_paths,
-      task_templates ( title, time_due, role_responsible, is_mandatory, checklist_steps, assigned_user_id, compliance_file_url ),
+      task_templates ( ${TASK_TEMPLATE_SELECT} ),
       surgeries ( name )
     `
     )
