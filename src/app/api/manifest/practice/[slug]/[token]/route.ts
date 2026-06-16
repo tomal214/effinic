@@ -5,11 +5,21 @@ const MANIFEST_BASE = {
   name: 'Effinic',
   short_name: 'Effinic',
   display: 'standalone',
-  theme_color: 'oklch(0.58 0.14 175)',
-  background_color: 'oklch(0.975 0.010 82)',
+  theme_color: '#0d9488',
+  background_color: '#f8f7f4',
   icons: [
-    { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },
-    { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png' },
+    {
+      src: '/brand/icon-192.png',
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'any',
+    },
+    {
+      src: '/brand/icon-512.png',
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'any maskable',
+    },
   ],
 }
 
@@ -23,8 +33,19 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  return NextResponse.json({
+  const startUrl = `/p/${slug}/${token}`
+  const manifest = {
     ...MANIFEST_BASE,
-    start_url: `/p/${slug}/${token}`,
+    name: `${practice.name} · Effinic`,
+    short_name: practice.name,
+    id: startUrl,
+    start_url: startUrl,
+    scope: '/',
+  }
+
+  return new NextResponse(JSON.stringify(manifest), {
+    headers: {
+      'Content-Type': 'application/manifest+json',
+    },
   })
 }
