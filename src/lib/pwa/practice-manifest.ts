@@ -10,7 +10,7 @@ export type PracticeManifestInput = {
 function practiceShortName(name: string) {
   const trimmed = name.trim()
   if (trimmed.length <= 12) return trimmed
-  return `${trimmed.slice(0, 11).trimEnd()}…`
+  return trimmed.slice(0, 12).trimEnd()
 }
 
 export function buildPracticeManifest({
@@ -26,7 +26,7 @@ export function buildPracticeManifest({
   return {
     name: `${name} · Effinic`,
     short_name: practiceShortName(name),
-    id: startUrl,
+    id: startPath,
     start_url: startUrl,
     scope,
     display: 'standalone',

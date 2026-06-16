@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import PwaHeadLinks from '@/components/app/PwaHeadLinks'
 import { getPracticeBySlugToken } from '@/lib/auth/practice'
 
 type LayoutProps = {
@@ -13,10 +14,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, token } = await params
   const practice = await getPracticeBySlugToken(slug, token)
-  const manifestPath = `/p/${slug}/${token}/manifest.webmanifest`
 
   return {
-    manifest: manifestPath,
     appleWebApp: {
       capable: true,
       title: practice?.name ?? 'Effinic',
@@ -24,6 +23,17 @@ export async function generateMetadata({
   }
 }
 
-export default function NursePracticeLayout({ children }: LayoutProps) {
-  return children
+export default async function NursePracticeLayout({
+  children,
+  params,
+}: LayoutProps) {
+  const { slug, token } = await params
+  const manifestPath = `/p/${slug}/${token}/manifest.webmanifest`
+
+  return (
+    <>
+      <PwaHeadLinks manifestHref={manifestPath} />
+      {children}
+    </>
+  )
 }

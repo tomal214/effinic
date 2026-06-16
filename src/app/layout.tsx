@@ -24,11 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${GeistSans.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${GeistSans.variable} h-full antialiased`}>
       <body className={`${GeistSans.className} min-h-full flex flex-col`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.querySelectorAll('body link[rel="manifest"]').forEach(function(el){document.head.appendChild(el);});`,
+          }}
+        />
         <div
           id="effinic-boot"
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-6 bg-[oklch(0.975_0.010_82)] px-6 transition-opacity duration-300"

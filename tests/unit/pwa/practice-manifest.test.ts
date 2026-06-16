@@ -27,7 +27,7 @@ describe('buildPracticeManifest', () => {
       token: '11111111-1111-1111-1111-111111111111',
     })
 
-    expect(manifest.short_name).toBe('Demo Dental…')
+    expect(manifest.short_name).toBe('Demo Dental')
     expect(manifest.short_name.length).toBeLessThanOrEqual(12)
   })
 
@@ -43,6 +43,8 @@ describe('buildPracticeManifest', () => {
       'https://effinic.vercel.app/p/demo-dental/11111111-1111-1111-1111-111111111111'
     )
     expect(manifest.scope).toBe('https://effinic.vercel.app/')
-    expect(manifest.id).toBe(manifest.start_url)
+    expect(manifest.id).toBe(
+      '/p/demo-dental/11111111-1111-1111-1111-111111111111'
+    )
   })
 })
